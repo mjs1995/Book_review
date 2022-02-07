@@ -264,3 +264,24 @@
   - 서버나 애플리케이션을 모니터링하고 리소스를 자동으로 조정(Scale In/Scale Out)하여, 최대한 저렴한 비용으로 안정적이고 예측 가능한 성능을 유지함 
   - Amazon Auto Scaling 그룹
     - 인스턴스의 조정 및 관리 목적으로 구성된 논리적 그룹으로 Auto Scaling을 수행하는 인스턴스의 모음
+
+# Amazon CloudFront - CDN 서비스로 웹 사이트의 속도를 더욱 빠르게 하기
+- CDN(Contents Delivery Network)
+  - 콘텐츠를 효율적으로 전달하기 위해 여러 노드를 가진 네트워크에 데이터를 저장하여 제공하는 시스템
+  - 온라인 상의 대용량 콘텐츠를 저렴한 비용으로 빠르게 전송
+  - ISP(Internet Services Provider)의 CDN 서버에 콘텐츠를 분산시키고 유저의 네트워크 경로 상 가장 가까운 곳의 서버로부터 콘텐츠를 전송받도록 하여 트래픽이 특정 서버에 집중되지 않고 각 지역 서버로 분산되도록 하는 기술
+  - 캐싱 방식
+    - Static Caching : 사용자의 요청이 없어도 Origin Server에 있는 Contents를 운영자가 미리 Cache Services에 복사함으로써 사용자가 Cache 서버에 접속하여 Contents를 요청하면 Cache 서버가 콘텐츠를 전달하는 방식
+    - Dynamic Caching : 최초에는 Cache 서버에 콘텐츠가 없으나, 사용자가 콘텐츠를 요청하면 Cache 서버에 콘텐츠가 있는지 여부를 확인, 없으면 오리진(Origin) 서버에서 다운로드 받아 사용자에게 전달하고, 이후 동일 요청을 받게 되면 캐싱된 콘텐츠를 사용자에게 제공하게 됨
+- Amazon CloudFront
+  - 짧은지연 시간과 빠른 전송 속도로 최종 사용자에게 데이터,동영상,애플리케이션 및 API를 안전하게 전송하는 글로벌 콘텐츠 전송 네트워크(CDN) 서비스
+  - CloudFront는 AWS와 통합, AWS에는 AWS 글로벌 인프라와 직접 연결된 물리적 위치뿐만 아니라 DDos(Distributed Denial of Services)와 같은 외부 공격을 완화하는 AWS Shield, Load Balancing, 최종 사용자와 가까운 위치에서 사용자 정의 코드를 실행하도록 지원하는 Lambda@Edge 등의 서비스와 원활하게 연동되는 소프트웨어가 포함됨
+  - 기능
+    - 정적 콘텐츠에 대한 캐싱 서비스와 비디오 스트리밍 서비스
+      - 전세계를 대상으로 온디맨드 미디어 스트리밍 서비스를 제공함
+      - MPEG DASH, Apple HLS, Microsoft Smooth Streaming, CMAF 등과 같은 일반적인 형식의 동영상 스트리밍 서비스를 제공
+      - Amazon Elemental Media Convert와 같은 서비스를 사용하여 라이브 스트리밍 서비스를 제공
+    - 동적 콘텐츠에 대한 캐싱 서비스
+      - 웹 사이트의 전체 서비스에 해당하는 이미지, 동영상 등의 정적 파일 외에도 동적인 파일에 대해서도 Caching 할 수 있음
+    - 다양한 보안 서비스
+    - 비용 최적화를 통한 비용 절감
