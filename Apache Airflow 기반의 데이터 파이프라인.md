@@ -158,3 +158,11 @@
 - 클라우드 서비스에 연결하기
   - AWS 클라이언트의 이름은 boto3, GCP 클라이언트의 이름은 Cloud SDK, Azure SDK for Python 이러한 클라이언트는 요청에 필요한 세부 정보를 입력하면 클라이언트가 요청 및 응답 처리를 내부적으로 처리하는 편리한 기능을 제공함
 - S3CopyObjectOperator : 소스 및 타겟의 버킷 이름과 오브젝트 이름을 넣고 요청하면 선택한 오브젝트를 대신 복사함
+- AWS에서 인터넷에 액세스하기 위해서는 SageMaker 엔드포인트를 트리거하는 Lambda를 개발 및 배포하고 API Gateway를 생성 및 연결해 외부에서 접속할 수 있는 HTTP 엔드포인트를 만듬
+  - 인프라의 배포를 코드로 구성해 배포하지 않는 이유는 Lambda 및 API Gateway를 주기적으로 배포하지 않고 한 번만 배포하면 되기 때문
+## 시스템 간 데이터 이동하기
+- 대규모 데이터 처리 작업에서는 도커 컨테이너를 스파크 작업으로 대체하면 여러 시스템에서 분산 처리가 가능함
+- Airflow가 구동중인 시스템의 모든 리소스를 사용하는 매우 큰 작업을 가지고 있다고 가정해 보면 작업을 다른 곳에서 수행하고 Airflow는 작업이 시작되고 완료될때까지 대기하는 것이 더 좋음, 오케스트레이션과 실행이 완벽하게 분리되어 있어야 하며, Airflow에 의해서 작업은 시작되지만 Apache Spark 같은 데이터 처리 프레임워크가 실제 작업을 수행하고 완료될 때까지 기다림
+  - SparkSubmintOperator : Airflow 머신에서 Spark 인스턴스를 찾기 위해 spark-submit 파일과 YARN 클라이언트 구성이 필요함
+  - SSHOperator : Spark 인스턴스에 대한 SSH 액세스가 필요하지만 Airflow 인스턴스에 대한 Spark 클라이언트 구성이 별도로 필요하지 않음
+  - SimpleHTTPOperator : Apache Spark용 REST API인 Livy를 실행
