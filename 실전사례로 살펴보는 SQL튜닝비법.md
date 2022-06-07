@@ -14,3 +14,19 @@
   - ![image](https://user-images.githubusercontent.com/47103479/172156542-f197b902-fac7-444a-8fea-29332ba1e7dd.png)
   - 명령의 옵션
   - ![image](https://user-images.githubusercontent.com/47103479/172156752-4aad49df-74ea-4938-abd7-21f3adb1d76a.png)
+
+# 옵티마이저
+- 사용자가 실행한 SQL을 해석하고, 데이터를 추출을 위한 실행계획을 수립하는 프로세스
+- 옵티마이저 종류
+  - 오라클
+    - RBO(Rule Based Optimizer) : 초창기 버전부터 제공함
+      - 규칙기준 옵티마이저는 인덱스 구조나 사용하는 연산자에 따라 부여되는 순위가 정해져 있음(Rank Rule)
+      - 기본적으로 15개의 순위가 매겨진 규칙이 있음
+      - SQL에 대한 실행계획이 하나 이상일 경우엔, 순위가 높은 규칙을 이용하게 됨
+    - CBO(Cost Based Optimizer) : v10g부터 기본적인 설정으로 적용되고 있음
+      - 대상 row들을 처리하는데 필요한 자원 사용을 최소화해서, 궁극적으로 데이터를 빨리 처리하는 데 목적이 있음
+      - CBO에 영향을 미치는 비용 산정 요소
+        - 각종 통계 정보, Hint, 연산자, Index, Cluster, DBMS 버전, CPU/Memory 용량, Disk I/O 등과 같이 매우 다양함
+      - CBO의 성능을 최적의 상태로 유지시키기 위해서 테이블, 인덱스, 클러스터 등을 대상으로 통계 정보를 생성함
+
+
