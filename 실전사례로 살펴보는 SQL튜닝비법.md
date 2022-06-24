@@ -192,4 +192,28 @@
   - UNION으로 연결된 각각의 SQL이 읽고 있는 데이터가 전부 같을 경우, 데이터 복제와 같은 개념 활용을 위해 사용
   - 데이터 구조 변환을 통해 사용자가 요청한 구조대로 데이터를 조회할 때 사용
   - SQL문으로 일년 치 날짜를 만들 때 사용 
-  - 
+
+# SUBQUERY와 함수의 활용
+- SUBQUERY
+  - 하나의 질의문 내부에 하나 이상의 다른 질의문이 포함되어 그 결과를 이용할 때 내부에 포함된 쿼리문을 말함
+  - Group by 절을 제외하고는 어디든 위치할 수 있음
+- NESTED SUBQUERY
+  - 서브쿼리가 WHERE절에서 사용된 경우 NESTED SUBQUERY라고 함
+  - NESTED SUBQUERY가 Main Query보다 먼저 실행될 때 속도를 낼 수 있는 유형임
+  - 단, 서브쿼리 쪽에서 조회되는 Main Query값에 인덱스가 없으면 서브쿼리는 먼저 실행되지 않음 
+- CORRELATED SUBQUERY
+  - 서브쿼리가 WHERE절에서 사용되고 메인 쿼리에서 데이터를 하나씩 읽을 때마다 서브쿼리가 실행되어 데이터를 리턴하는 서브쿼리를 CORRELATED SUBQUERY라고함
+  - 메인쿼리에서 데이터를 읽고 있는 Row수 만큼 서브쿼리가 실행됨 
+- SCALAR SUBQUERY
+  - 단, 하나의 데이터와 단 하나의 칼럼에 대한 정보를 리턴함
+  - Select List항목, 함수의 인자, WHERE절의 조건, Order by 절, case 조건절, case 결과절
+- ROLLUP()&CUBE()
+  - ROLLUP() : 데이터의 총계를 나타낼 때 사용하는 함수
+  - CUBE() : 데이터의 소계를 나타낼 때 사용하는 함수 
+- ANALYTICAL FUNCTIONS
+  - 행과 행 간의 관계를 정의하거나 비교, 연산하기 위해 사용함 
+  - Select Analytics_Function (argumetns) OVER ([Partition By 칼럼] [Order By 절] [Windowing 절]) From 테이블 명 )
+  - Arguments : 함수에 따라 0~3개의 인자가 지정됨
+  - Partition By 절 : 전체 집합을 기준에 의해 소그룹으로 나눔
+  - Order By 절 : 어떤 항목에 대한 정렬 기준을 기술함
+  - Windowing 절 : 함수에 의해서 제어하고자 하는 데이터 범위를 정의함 
