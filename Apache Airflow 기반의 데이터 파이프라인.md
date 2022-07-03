@@ -354,3 +354,23 @@
   - 웹 서버 로그 : 웹 활동에 대한 정보, 즉 웹 서버로 전송되는 요청에 대한 정볼르 보관함
   - 스케줄러 로그 : DAG 구문분석, 예약 작업 등을 포함한 모든 스케줄러 활동에 대한 정보를 보관함
   - 태스크 로그 : 각 로그 파일에는 단일 태스크 인스턴스의 로그가 보관됨 
+- 원격 저장소로 로그 보내기
+  - Airflow에는 로그를 원격 시스템으로 전송할 수 있는 원격 로깅이라는 기능 존재
+    - AWS S3(pip install  apache-airflow[amazon] 필요)
+    - Azure Blob Storage(pip install apache-airflow[microsoft.azure] 필요)
+    - Elasticsearch (pip install apache-airflow[elasticsearch] 필요)
+    - Google Cloud Storage (pip install apache-airflow[google] 필요)
+- Airflow 메트릭 시각화 및 모니터링
+  - Pushing vs Pulling
+    - push 모델을 사용하면 메트릭이 메트릭 수집 시스템으로 전송되거나 밀어넣게됨
+    - Pull 모델을 사용하면 메트릭은 특정 엔드포인트에서 모니터링하기 위해 시스템에 의해 노출되고, 메트릭 수집 시스템은 지정된 엔드포인트에서 모니터링하기 위해 시스템에서 메트릭을 가져오거나 가져오게해야 함 
+  - Prometheus는 메트릭을 수집하고 Grafana는 대시보드에서 메트릭을 시각화함
+  - Prometheus StatsD 내보내기는 StatsD 측정 항목을 Prometheus의 측정 항목 형식으로 변환하고 Prometheus가 스크랩할 수 있도록 노출함
+- 메트릭을 수집하도록 Promethues 구성
+  - Prometheus 
+    - 시스템 모니터링을 위한 소프트웨어
+    - PromQL이라는 언어로 쿼리할 수 있는 시계열 데이터베이스의 역할을 수행함 
+- 실패한 태스크에 대한 알림을 받는 방법
+  - DAG 및 오퍼레이터(operator)의 정의 내에서 콜백(callback: 특정 이벤트를 호출하는 함수)을 구성할 수 있음
+  - 서비스 수준 계약 정의(Service Level Agreement, SLA)
+    - SLA의 일반적인 정의는 서비스 또는 제품에 대한 충족하는 특정 표준
