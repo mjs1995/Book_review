@@ -374,3 +374,28 @@
   - DAG 및 오퍼레이터(operator)의 정의 내에서 콜백(callback: 특정 이벤트를 호출하는 함수)을 구성할 수 있음
   - 서비스 수준 계약 정의(Service Level Agreement, SLA)
     - SLA의 일반적인 정의는 서비스 또는 제품에 대한 충족하는 특정 표준
+
+## Airflow 보안 
+- Airflow 1.10.0에서 RBAC(role-based access control, 역할 기반 액세스 제어) 인터페이스를 처음 도입, RBAC 인터페이스는 해당 권한으로 역할을 정의하고 이러한 역할에 사용자를 할당하여 액세스를 제한하는 메커니즘을 제공함 
+- Flask 기본 인터페이스는 더 이상 사용되지 않으며 Airlfow 2.0에서 제거되었음, RBAC 인터페이스는 이제 유일한 인터페이스
+- RBAC 모델은 웹서버 인터페이스의 특정 구성 요소에 대해 접근할 수 있는(특정 작업에 대한) 권한과 (단일) 역할을 가진 유저를 구성함
+- RBAC 인터페이스 설정
+  - RBAC 인터페이스는 FAB(Flask-AppBuilder) 프레임워크를 기반으로 개발됨
+  - $AIRFLOW_HOME에 web-server_config.py
+  - Airflow RBAC 인터페이스의 기본 프레임워크인 FAB에 대한 구성이 포함되어 있음
+- LDAP 서비스로 연결
+  - 디렉터리 서비스라고 하는 Azure AD 또는 OpenLDAP와 같은 LDAP 프로토콜(경량 디렉터리 액세스 프로토콜)을 지원하는 서비스를 사용하는 것 
+
+# 클라우드에서 Airflow
+- 관리형 Airflow 서비스
+    - Astronomer.io
+        - 쿠버네티스 기반의 솔루션, Airflow를 SaaS형 솔루션(Astronomer Enterprise), 바닐라 Airflow와 비교하면 Astronomer는 Airflow 인스턴스를 쉽게 배포하는 별도의 툴을 제공 
+        - UI와 별도로 만들어진 CLI로 제공함
+        - CLI는 배포를 위해 Airflow의 로컬 인스턴스를 실행해 주고, 쉽게 DAG를 개발할 수 있게 함
+    - 구글 Cloud Composer
+        - 구글 클라우드 플랫폼의 최상단에서 구동되는 Airflow의 관리형 버전 
+        - one-click으로 GCP의 서비스들을 통합하여 Airflow를 배포할 수 있음
+    - 아마존 Managed Workflows for Apache Airflow(MWAA)
+        - AWS 클라우드에서 배포를 관리형으로 쉽게 생성해주는 AWS 서비스 
+        - AWS 서비스로는 S3, RedShift, SageMaker, 로깅과 알람을 위한 AWS CloudWatch,그리고 웹 인터페이스와 데이터에 대한 액세스 보안을 싱글로그인(single login)으로 제공하는 AWS IAM
+        - 다른 관리형 솔루션과 유사하게 CeleryExecutor를 사용하여 현재 워크로드(workload)에 따라 워커를 스케일링(scaling)하며 사용자 대신 기반 인프라를 관리함 
