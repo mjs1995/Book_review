@@ -430,3 +430,30 @@
         - 스케줄러가 워커에 작업을 전달할 수 있는 메시지 브로커(message broker)를 추가해야함 
         - Fargate 혹은 이와 유사한 서비스로 메시지 브로커(RabbitMQ 혹은 Redis)를 직접 구축할 수 있지만, AWS의 SQS서비스를 사용하는 것이 훨씬 더 쉬움, 간단한 서버리스 메시지 브로커 기능을 제공하는데 유지 보수 노력은 거의 필요 없음 
         - 단점, LocalExecutor보다 구성이 좀 더 복잡해서, 구성할 때 더 많은 작업이 필요함, 각 워커들을 위한 컴퓨팅 리소스들을 필요하기 때문에 추가된 컴포넌트들(특히 부가적인 워커 태스크)은 상당한 비용을 추가시킬 수 있음 
+- 추가 단계
+    - 운영 배포에 있어 무엇보다도 중요한 고려 사항은 보안 
+    - 컴포넌트들에 대한 접근 제어와 AWS 리소스에 대한 접근 제어 
+    - 컴포넌트 접근 제어에는 보안 그룹과 네트워크 ACL를 사용할 수 있고, AWS 리소스에 대한 접근은 자격 및 접근 관리(identity and access management, IAM)의 역할과 정책을 적절히 부여하여 제한할 수 있음 
+    - 운영 환경에 배포할 때에는 로깅(logging), 감사(auditing),추적 메트릭스(tracking metrics) 그리고 배포된 서비스의 이슈 발생에 대한 알람 등에 대한 견고한 처리 방안이 필요함 
+    - CloudTrail과 CloudWatch를 포함하여 관련된 AWS 서비스들을 살펴보는 것이 좋음 
+- AWS 전용 훅과 오퍼레이터 
+    - AWS 전용 훅의 요약 
+        - Athena - 서버리스 빅 데이터 쿼리 - AWSAthenaHook - 쿼리 실행, 쿼리 상태 모니터링, 결과 수집 
+        - CloudFormation - 인프라 리소스들(스택)관리 - AWSCloudFormation Hook - CloudFormation 스택의 생성과 삭제 
+        - EC2 - VM(가상 머신) - EC2Hook - VM의 세부 사항 수집; 상태가 변경될 때까지 대기함 
+        - Glue - 관리형 ETL 서비스 - AWSGlueJobHook - Glue 작업을 생성하고 상태를 체크함 
+        - Lambda - 서버리스 함수 - AWSLambdaHook - Lambda함수 호출 
+        - S3 - Simple Storage Service - S3Hook - 파일의 리스트 및 업로드 / 다운로드 
+        - SageMaker - 관리형 머신러닝 서비스 - SageMakerHook - 머신러닝 작업과 엔드포인트 등의 생성과 관리 
+    - AWS전용 오퍼레티어 요약 
+        - AWSAthenaOperator - Athena - Athena에서 쿼리 실행
+        - CloudFormationCreateStackOperator - CloudFormation - CloudFormation ㅅ택 생성
+        - CloudFormationDeleteStackOperator - CloudFormation - CloudFormation 스택 삭제스
+        - S3CopyObjectOperator - s3 - S3에 있는 오브젝트 복사
+        - SageMakerTrainingOperator - SageMaker - SageMaker 학습 작업 생성 
+    - AWSBaseHook는 특별히 언급할만한 훅으로서 AWS boto3 라이브러리를 사용하여 WS 서비스와 제네릭 인터페이스를 제공함 
+- AWS Athena를 사용한 서버리스 영화 랭킹 구축 
+    - Glue는 S3에 저장된 데이터의 테이블 뷰를 생성하여, 영화 랭킹을 계산할 때 데이터를 쿼리할 수 있도록 함 
+    - AWS Athena(서버리스 SQL 쿼리 엔진)를 사용하여 평점 테이블에서 SQL 쿼리를 실행하고 영화랭킹을 계산함 
+    - S3및 Glue/Athena는 매우 확장성이 좋은 기술이고 서버리스로 구성하기 때문에 서버를 별도로 구축할 필요가 없고 한 달에 한 번 실행되는 프로세스에 대해 서버 비용을 사용할 때만 지불하여 비용을 절감할 수 있음 
+    - 재사용성을 위해 CloudFormation(코드로 클라우드 리소스를 정의하는 AWS 템플릿 솔루션)과 같은 코드형 인프라(infrastructure-as-code,IaC) 솔루션으로 리소스를 정의하고 관리하는 것이 좋음 
