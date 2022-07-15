@@ -457,3 +457,29 @@
     - AWS Athena(서버리스 SQL 쿼리 엔진)를 사용하여 평점 테이블에서 SQL 쿼리를 실행하고 영화랭킹을 계산함 
     - S3및 Glue/Athena는 매우 확장성이 좋은 기술이고 서버리스로 구성하기 때문에 서버를 별도로 구축할 필요가 없고 한 달에 한 번 실행되는 프로세스에 대해 서버 비용을 사용할 때만 지불하여 비용을 절감할 수 있음 
     - 재사용성을 위해 CloudFormation(코드로 클라우드 리소스를 정의하는 AWS 템플릿 솔루션)과 같은 코드형 인프라(infrastructure-as-code,IaC) 솔루션으로 리소스를 정의하고 관리하는 것이 좋음 
+
+## Azure에서의 Airflow 
+- 서비스 선택
+    - Azure의 관리형 컨테이너 서비스를 사용, Azure Container Instances(ACI)나 Azure KubernetesService(AKS) 등, 웹 서버를 위해서는 Azure App Service와 같은 다른 서비스 옵션들도 있음 
+    - Azure App Service는 웹 애플리케이션의 빌드와 배포, 그리고 웹 애플리케이션의 스케일링에 대한 완전 관리형 플랫폼(fully managed platform), 인증과 모니터링 등의 기능을 포함하여, 웹 서비스를 관리형 플랫폼에 배포할 때 쉽고 편리한 방안을 제공함 
+    - 스케줄러를 배포할 때에는 기본적인 컨테이너 런타임을 제공하는 ACI를 사용하는 것이 더 합리적임 
+    - Airflow 메타스토어로는 Azure SQL 데이터베이스와 같은 Azure의 관리형 데이터베이스를 사용하는 것이 좋음 
+    - Azure File Storage, Azure Blob Storage, Azure Data Lake Storage등과 같이 여러 가지 스토리지 솔루션을 제공함 
+        - Azure File Storage는 DAG를 호스팅할 때 가장 편한 솔루션, 파일 스토리지 볼륨을 App Service와 ACI 컨테이너에 직접 마운트할 수 있음 
+        - 데이터 스토리지로는 Azure Blob Storage나 Azure Data Lake Storage가 더 적합함, Azure File Storage보다 데이터 워크로드를 처리하는 데 더 적합함 
+- 실제 운영 환경에 적용하기에는 아직 부족함, 적절한 방화벽과 액세스 컨트롤 등과 같이 추가적인 작업이 더 필요함, Airflow 측면에서는 Airflow의 보안 방법을 더 고려해야함 
+- Azure Synapse를 사용하여 서버리스 영화 랭킹 구축 
+    - Azure Synapse 사용, Azure의 SQL 온 디맨드 기능을 사용하여 서비리스로 SQL쿼리를 실행할 수 있는 기능을 제공함 
+
+## GCP에서의 Airflow
+- 구글 클라우드 플랫폼은 훅과 오퍼레이터의 개수로 보면 Airflow를 적용할 때 사실상 최고의 클라우드 플랫폼, 거의 모든 구글 서비스를 Airlfow로 제어하는 것이 가능 
+- 서비스 선택
+    - 사용자가 원하는 어떤 소프트웨어도 실행할 수 있는 가상 머신을 제공하는 Compute Engine이 있음 
+    - Compute Engine은 사용자에게 완벽한 자유와 제어권을 제공함, 사용자가 직접 가상 머신을 설정하고 관리해야하는 단점도 존재
+    - GCP에서 지원하는 언어 중 하나로 함수를 직접 제공할 수 있는 Cloud Functions이 있음 
+- CeleryExecutor를 사용한 스케일링
+    - 셀러리(celery)는 메시지 브로커를 사용하여 태스크를 여러 워커에게 분산시킴 
+    - GCP는 Pub/Sub라는 메시지 서비스를 제공하지만 셀러리가 이 서비스를 지원하지는 않음 , RabbitMQ나 Radis와 같이 셀러리가 지원하는 오픈 소스 툴을 사용해야 함 
+- GCP에서 서버리스 영화 랭킹 구축
+    - AWS Glue는 Apache Spark 서비스와 메타데이터 스토어 기능을 제공하는 관리형 서비스이고 GCP DataFlow는 관리형 Apache Beam 서비스 
+- GCP에서 Airflow를 설치하고 실행하는 가장 쉬운 방법은 GKE에서 Airflow 헬름 차트를 사용하는 것 
