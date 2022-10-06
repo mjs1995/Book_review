@@ -35,5 +35,38 @@
 - MySQL 시스템 변수의 특징
   - MySQL 서버는 기동하면서 설정 파일의 내용을 읽어 메모리나 작동 방식을 초기화하고, 접속된 사용자를 제어하기 위해 이러한 값을 별도로 저장해 둠, MySQL 서버에서는 이렇게 저장된 값을 시스템 변수(System Variables)라고 함, SHOW VARIABLES 또는 SHOW GLOBAL VARIABLES라는 명령으로 확인할 수 있음 
   - 시스템 변수가 가지는 5가지 속성
+    - Cmd-Line : MySQL 서버의 명령행 인자로 설정될 수 있는지 여부를 나타냄 
+    - Option file : MySQL의 설정 파일인 my.cnf(또는 my.ini)로 제어할 수 있는지 여부를 나타냄
+    - System Var : 시스템 변수인지 아닌지를 나타냄 
+    - Var Scope : 시스템 변수의 적용 범위를 나타냄. 이 시스템 변수가 영향을 미치는 곳이 MySQL 서버 전체(Global, 글로벌 또는 전역)를 대상으로 하는지, 아니면 MySQL 서버와 클라이언트 커넥션(Session, 세션 또는 커넥션)만인지 구분함 
+    - Dynamic : 시스템 변수가 동적인지 정적인지 구분하는 변수
+- 글로벌 변수와 세션 변수
+  - 글로벌 범위의 시스템 변수는 하나의 MySQL 서버 인스턴스에서 전체적으로 영향을 미치는 시스템 변수를 의미하며, 주로 MySQL 서버 자체에 관련된 설정일 때가 많음. MySQL 서버에서 단 하나만 존재하는 InnoDB 버퍼 풀 크기(innodb_buffer_pool_size) 또는 MyISAM의 키 캐시 크기(key_buffer_size)등이 가장 대표적인 글로벌 영역의 시스템 변수
+  - 세션 범위의 시스템 변수는 MySQL 클라이언트가 MySQL 서버에 접속할 때 기본으로 부여하는 옵션의 기본값을 제어하는 데 사용됨, 기본값은 글로벌 시스템 변수이며, 각 클라이언트가 가지는 값이 세션 시스템 변수. 각 클라이언트에서 쿼리 단위로 자동 커밋을 수행할지 여부를 결정하는 autocommit 변수가 대표적인 예 
+- SET PERSIST
+  - MySQL 서버의 max_connections라는 시스템 변수, MySQL 서버로 접속할 수 있는 최대 커넥션의 개수를 제한하는 동적 시스템 변수 
+  - SET PERSIST 명령으로 시스템 변수를 변경하면 MySQL 서버는 변경된 값을 즉시 적용함과 동시에 별도의 설정 파일(mysqld-auto.cnf)에 변경 내용을 추가로 기록해 둠. MySQL 서버가 다시 시작될 때 기본 설정 파일(my.cnf)뿐만 아니라 자동 생성된 mysqld-auto.cnf 파일을 같이 참조해서 시스템 변수에 적용함. SET_PERSIST 명령을 사용하면 MySQL 서버 설정 파일(my.cnf)에 변경 내용을 수동으로 기록하지 않아도 자동으로 영구 변경이 되는 것 
+  - SET PERSIST 명령은 세션 변수에는 적용되지 않으며, SET_PERSIST 명령으로 시스템 변수를 변경하면 MySQL 서버는 자동으로 GLOBAL 시스템 변수의 변경으로 인식하고 변경함. 현재 실행 중인 MySQL 서버에는 변경 내용을 적용하지 않고 다음 재시작을 위해 mysqld-auto.cnf 파일에만 변경 내용을 기록해두고자 한다면 SET_PERSIST_ONLY 명령을 사용하면 됨 
+  - SET PERSIST_ONLY 명령은 정적인 변수의 값을 영구적으로 변경하고자 할 때도 사용할 수 있음. SET ERSIST 명령은 현재 실행 중인 MySQL 서버에서 동적인 변수들의 값을 변경함과 동시에 mysqld-auto.cnf 파일에도 기록하는 용도, 정적인 변수는 실행 중인 MySQL 서버에서 변경할 수 없음. innodb_doublewrite는 정적 변수로, MySQL 서버가 재시작될 때만 변경될 수 있음. 정적 변수를 mysqld-auto.cnf파일에 기록해두고자 할 때 SET PERSIST_ONLY 명령을 활용하면 됨 
+  - SET PERSIST 명령이나 SET PERSIST_ONLY 명령으로 시스템 변수를 변경하면 JSON 포맷의 mysqld-auto.cnf파일이 생성됨. mysqld-auto.cnf 파일에는 변경된 시스템 변수의 이름과 설정값, 추가로 언제 누구에 의해 시스템 변수가 변경됐는지 등의 정보도 함께 기록됨 
+  - SET PERSIST 또는 SET PERSIST_ONLY 명령으로 변경된 시스템 변수의 메타데이터는 performance_schema.variables_info 뷰와 performance_schema.persisted_variables 테이블을 통해 참조할 수도 있음 
+  - mysqld-auto.cnf 파일의 내용을 삭제해야 하는 경우에는 다음과 같이 REST PERSIST 명령을 사용하는 것이 안전함 
 
-    
+# 사용자 및 권한
+- 사용자 식별
+  - MySQL의 사용자는 다른 DBMS와는 조금 다르게 사용자의 계정뿐 아니라 사용자의 접속 지점(클라이언트가 실행된 호스트명이나 도메인 또는 IP 주소)도 계정의 일부가 됨 
+  - 만약 모든 외부 컴퓨터에서 접속이 가능한 사용자 계정을 생성하고 싶다면 사용자 계정의 호스트 부분을 % 문자로 대체하면 됨, % 문자는 모든 IP 또는 모든 호스트명을 의미함 
+- 사용자 계정 관리
+  - 계정은 SYSET_USER 권한을 가지고 있느냐에 따라 시스템 계정(System Account)과 일반 계정(Regular Account)으로 구분됨 
+  - 시스템 계정은 데이터베이스 서버 관리자를 위한 계정이며, 일반 계정은 응용 프로그램이나 개발자를 위한 계정 정도로 생각하면 이해하기 쉬울 것 
+  - 시스템 계정 
+    - 계정 관리(계정 생성 및 삭제, 그리고 계정의 권한 부여 및 제거)
+    - 다른 세션(Connection) 또는 그 세션에서 실행 중인 쿼리를 강제 종료
+    - 스토어드 프로그램 생성 시 DEFINER를 타 사용자로 설정 
+  - 시스템 계정과 일반 계정의 개념이 도입된 것은 DBA(데이터베이스 관리자) 계정에는 SYSTEM_USER 권한을 할당하고 일반 사용자를 위한 계정에는 SYSETM_USER 권한을 부여하지 않게 하기 위해서 
+    - 사용자 : MySQL 서버를 사용하는 주체(사람 또는 응용 프로그램)
+    - 계정 : MySQL 서버에 로그인하기 위한 식별자(로그인 아이디) 
+  - MySQL 서버에 내장된 계정
+    - 'mysql.sys'@'localhost': MySQL 8.0부터 기본으로 내장된 sys 스키마의 객체(뷰나 함수, 그리고 프로시저)들의 DEFINER로 사용되는 계정
+    - 'mysql.session'@'localhost': MySQL 플러그인이 서버로 접근할 때 사용되는 계정 
+    - 'mysql.infoschema'@'localhost' : information_schema에 정의된 뷰의 DEFINER로 사용되는 계정 
