@@ -70,3 +70,54 @@
     - 'mysql.sys'@'localhost': MySQL 8.0부터 기본으로 내장된 sys 스키마의 객체(뷰나 함수, 그리고 프로시저)들의 DEFINER로 사용되는 계정
     - 'mysql.session'@'localhost': MySQL 플러그인이 서버로 접근할 때 사용되는 계정 
     - 'mysql.infoschema'@'localhost' : information_schema에 정의된 뷰의 DEFINER로 사용되는 계정 
+- 계정 생성
+  - 일반적으로 많이 사용되는 옵션을 가진 CREATE USER 명령
+```sql
+CREATE USER 'user'@'%'
+  IDENTIFIED WITH 'mysql_native_password' BY 'password'
+  REQUIRE NONE
+  PASSWORD EXPIRE INTERVAL 30 DAY
+  ACCOUNT UNLOCK
+  PASSWORD HISTORY DEFAULT
+  PASSWORD REUSE INTERVAL DEFAULT
+  PASSWORD REQUIRE CURRENT DEFAULT;
+```
+  - IDENTIFIED WITH
+    - 사용자의 인증 방식과 비밀번호를 설정함. IDENTIFIED WITH 뒤에는 반드시 인증 방식(인증 플러그인의 이름)을 명시, 기본 인증 방식을 사용하고자 한다면 IDENTIFIED BY 'password' 형식으로 명시해야함 
+      - Native Pluggable Authentication : 단순히 비밀번호에 대한 해시(SHA-1 알고리즘) 값을 저장해두고, 클라이언트가 보낸 값과 해시값이 일치하는지 비교하는 인증 방식
+      - Caching SHA-2 Pluggable Authentication : 암호화 해시값 생성을 위해 SHA-2(256비트) 알고리즘을 사용함. Native Authentication과의 가장 큰 차이는 사용되는 암호화 해시 알고리즘 차이이며, SHA-2 Authentication은 저장된 해시값의 보안에 더 중점을 둔 알고리즘으로 이해할 수 있음 
+      - PAM Pluggable Authentication : 유닉스나 리눅스 패스워드 또는 LDAP(Lightweight Directory Access Protocol) 같은 외부 인증을 사용할 수 있게 해주는 인증 방식으로, MySQL 엔터프라이즈 에디션에서만 사용 가능함 
+      - LDAP Pluggable Authenticaiton : LDAP을 이용한 외부 인증을 사용할 수 있게 해주는 인증 방식으로, MySQL 엔터프라이즈 에디션에서만 사용 가능함 
+    - Caching SHA-2 Authentication은 SSL/TLS 또는 RSA 키페어를 필요로 하기 때문에 기존 MySQL 5.7까지의 연결방식과는 다른 방식으로 접속해야 함. 보안 수준은 좀 낮아지겠지만 기존 버전과의 호환성을 고려한다면 Caching SHA-2 Authentication보다는 Native Authenticaiton 인증 방식으로 계정을 생성해야 할 수도 있음 
+  - REQUIRE
+    - MySQL 서버에 접속할 때 암호화된 SSL/TLS 채널을 사용할지 여부를 설정함. 만약 별도로 설정하지 않으면 비암호화 채널로 연결하게 됨 
+  - PASSWORD EXPIRED
+    - 비밀번호의 유효 기간을 설정하는 옵션, 별도로 명시하지 않으면 default_password_lifetime 시스템 변수에 저장된 기간으로 유효 기간이 설정됨 
+      - PASSWORD EXPIRE : 계정 생성과 동시에 비밀번호 만료 처리 
+      - PASSWORD EXPIRE NEVER : 계정 비밀번호의 만료 기간 없음 
+      - PASSWORD EXPIRE DEFAULT : default_password_lifetime 시스템 변수에 저장된 기간으로 비밀번호의 유효 기간을 설정
+      - PASSWORD EXPIRE INTERVAL n DAY : 비밀번호의 유효 기간을 오늘부터 n일자로 설정
+  - PASSWORD HISTORY
+    - 한 번 사용했던 비밀번호를 재사용하지 못하게 설정하는 옵션
+      - PASSWORD HISTORY DEFAULT : password_history 시스템 변수에 저장된 개수만큼 비밀번호의 이력을 저장하며, 저장된 이력에 남아있는 비밀번호는 재사용할 수 없음 
+      - PASSWORD HISTORY n : 비밀번호의 이력을 최근 n개까지만 저장하며, 저장된 이력에 남아있는 비밀번호는 재사용할 수 없음 
+  - PASSWORD REUSE INTERVAL
+    - 한 번 사용했던 비밀번호의 재사용 금지 기간을 설정하는 옵션, 별도로 명시하지 않으면 password_reuse_interval 시스템 변수에 저장된 기간으로 설정함 
+      - PASSWORD REUSE INTERVAL DEFAULT : password_reuse_interval 변수에 저장된 기간으로 설정
+      - PASSWORD REUSE INTERVAL n DAY : n일자 이후에 비밀번호를 재사용할 수 있게 설정 
+  - PASSWORD REQUIRE
+    - 비밀번호가 만료되어 새로운 비밀번호로 변경할 때 현재 비밀번호(변경하기 전 만료된 비밀번호)를 필요로 할지 말지를 결정하는 옵션
+      - PASSWORD REQUIRE CURRENT : 비밀번호를 변경할 때 현재 비밀번호를 먼저 입력하도로 설정
+      - PASSWORD REQUIRE OPTIONAL : 비밀번호를 변경할 때 현재 비밀번호를 입력하지 않아도 되도록 설정
+      - PASSWORD REQUIRE DEFAULT : password_require_current 시스템 변수의 값으로 설정 
+  - ACCOUNT LOCK / UNLOCK
+    - 계정 생성 시 또는 ALTER USER 명령을 사용해 계정 정보를 변경할 때 계정을 사용하지 못하게 잠글지 여부를 결정함 
+      - ACCOUNT LOCK : 계정을 사용하지 못하게 잠금
+      - ACCOUNT UNLOCK : 잠긴 계정을 다시 사용 가능 상태로 잠금 해제 
+- 비밀번호 관리
+  - > INSTALL COMPONENT 'file://component_validate_password'; :validate_password 컴포넌트 설치
+  - 비밀번호 정책
+    - LOW : 비밀번호의 길이만 검증
+    - MEDIUM : 비밀번호의 길이를 검증하며, 숫자와 대소문자, 그리고 특수문자 배합을 검증
+    - STRONG : MEDIUM 레벨의 검증을 모두 수행하며, 금칙어가 포함됐는지 여부까지 검증 
+  - 이중비밀번호 : 하나의 계정에 대해 2개의 비밀번호를 동시에 설정할 수 있는데, 2개의 비밀번호는 프라이머리(Primary)와 세컨더리(Secondary)로 구분됨, 최근에 설정된 비밀번호는 프라이머리 비밀번호, 이전 비밀번호는 세컨더리 비밀번호. RETAIN CURRENT PASSWORD 옵션만 추가하면 됨 
