@@ -748,3 +748,73 @@ CREATE USER 'user'@'%'
         - 하나의 SQL 문자에서 SELECT 키워드는 여러 번 사용될 수 있음, 이때 각 SELECT 키워드로 시작하는 서브쿼리 영역을 쿼리 블록이라 함 
       - 글로벌(쿼리 전체) : 전체 쿼리에 대해서만 영향을 미치는 힌트 
       - 예전 버전의 MySQL 서버에서는 FROM 절에 사용된 서브쿼리를 항상 내부 임시테이블로 생성함, 이렇게 생성된 내부 임시테이블을 파생 테이블(Derived table), 이는 불필요한 자원 소모를 유발함 
+
+# 실행 계획
+- 대부분의 DBMS는 많은 데이터를 안전헤가 저장 및 관리하고 사용자가 원하는 데이터를 빠르게 조회할 수 있게 해주는 것이 주목적, 옵티마이저가 사용자의 쿼리를 최적으로 처리될 수 있게 하는 쿼리의 실행 계획을 수립할 수 있어야 함
+- 통계 정보
+  - MySQL 8.0 버전부터는 인덱스되지 않은 컬럼들에 대해서도 데이터 분포도를 수집해서 저장하는 히스토그램(Histogram) 정보가 도입됨
+  - 테이블 및 인덱스 통계 정보
+    - 비용 기반 최적화에서 가장 중요한 것은 통계 정보
+  - 히스토 그램
+    - Singleton(싱글톤 히스토그램) : 칼럼값 개별로 레코드 건수를 관리하는 히스토그램으로, Value-Based 히스토그램 또는 도수 분포라고도 불림 
+    - Equi-Height(높이 균형 히스토그램) : 칼럼값의 범위를 균등한 개수로 구분해서 관리하는 히스토그램으로, Height-Balanced 히스토그램이라고 불림 
+    - 히스토그램은 버킷(Bucket) 단위로 구분되어 레코드 건수나 칼럼값의 범위가 관리되는데, 싱글톤 히스토그램은 칼럼이 가지는 값별로 버킷이 할당되며 높이 균형 히스토그램에서는 개수가 균등한 칼럼값의 범위별로 하나의 버킷에 할당됨
+  - 인덱스 다이브(Index Dive) : 조건절에 일치하는 레코드 건수를 예측하기 위해 옵티마이저는 실제 인덱스의 B-Tree를 샘플링해서 살펴봄 
+  - 코스트 모델(Cost Model)
+    - MySQL 서버가 쿼리를 처리하려면 다음과 같은 다양한 작업을 필요로 함 
+      - 디스크로부터 데이터 페이지 읽기
+      - 메모리(InnoDB 버퍼 풀)로부터 데이터 페이지 읽기
+      - 인덱스 키 비교
+      - 레코드 평가
+      - 메모리 임시 테이블 작업
+      - 디스크 임시 테이블 작업
+    - MySQL 서버는 사용자의 쿼리에 대해 이러한 다양한 작업이 얼마나 필요한지 예측하고 전체 작업 비용을 계산한 결과를 바탕으로 최적의 실행 계획을 찾음
+    - 코스트 모델 : 전체 쿼리의 비용을 계산하는 데 필요한 단위 작업을의 비용
+- 실행 계획 확인
+  - MySQL 서버의 실행 계획은 DESC 또는 EXPLAIN 명령으로 확인할 수 있음 
+```sql
+EXPALIN ANALYZE
+SELECT e.emp_no, avg(s.salary)
+FROM employees e
+  INNER JOIN salaries s ON s.emp_no = e.emp_no
+        AND s.salary > 50000
+        AND s.from_date <= '1990-01-01'
+        AND s.to_date > '1990-01-01'
+WHERE e.first_name = 'Matt'
+GROUP BY e.hire_date \G
+
+-- A) -> Table scan on <temporary> (actual time=0.001..0.004 rows=48, loops= 1)
+-- B)   -> Aggregate using temporary tabel (actual time=3.799...3.808 rows=48, loops=1)
+-- C)     -> Nested loop inner join (cost=685.24 rows = 135)
+--                        (actual time = 0.367 ...3.602 rows=48 loops=1)
+-- D)       -> Index lookup on e using ix_firstname (first_name='Matt') (cost=215.08 rows=233)
+--                        (actual time = 0.348..1.046 rows=233 loops=1)
+-- E)       -> Filter: ((s.salary > 50000) and (s.from_date <= DATE '1990-01-01') and (s.to_date > DATE'1990-01-01)) (cost=0.98 rows 1)
+--                        (actual time = 0.009..0.011 rows = 0 loops = 233)
+-- F)         -> Index lookup on s using PRIMARY (emp_no = e.emp_no) (cost=0.98 rows=10)  
+--                        (actual time = 0.007..0.009 rows=10 loops=233)
+```
+
+  - TREE 포맷의 실행 계획에서 들여쓰기는 호출 순서를 의미하며 실제 실행 순서는 다음 기준으로 읽으면 됨 
+    - 들여쓰기가 같은 레벨에서는 상단에 위치한 라인이 먼저 실행
+    - 들여쓰기가 다른 레벨에서는 가장 안쪽에 위치한 라인이 먼저 실행 
+    - 실행 순서
+      - D) Index lookup on e using ix_firstname
+      - F) Index lookup on s using PRIMARY
+      - E) Filter
+      - C) Nested loop inner join
+      - B) Aggregate using temporary tabel
+      - A) Table scan on <temporary>
+  - EXPLAIN ANALYZE 명령의 결과에는 단계별로 실제 소요된 시간 (actual time)과 처리한 레코드 건수(rows), 반복 횟수(loops)가 표시됨
+- SUBQUERY
+  - 서브쿼리는 사용하는 위치에 따라 각각 다른 이름을 지니고 있음
+    - 중첩된 쿼리(Nested Query) : SELECT 되는 칼럼에 사용된 서브쿼리를 네스티드 쿼리라고 함
+    - 서브쿼리(Subqyery) : WHERE 절에 사용된 경우에는 일반적으로 그냥 서브쿼리라고 함 
+    - 파생 테이블(Derived Table) : FROM 절에 사용된 서브쿼리를 MySQL에서는 파생 테이블이라고 하며, 일반적으로 RDBMS에서는 인라인 뷰(Inline View) 또는 서브 셀렉트(Sub Select)라고 부름 
+  - 서브쿼리가 반환하는 값의 특성에 따라 다음과 같이 구분함
+    - 스칼라 서브쿼리(Scalar Subquery) : 하나의 값만(칼럼이 단 하나인 레코드 1건만) 반환하는 쿼리
+    - 로우 서브쿼리(Row Subquery) : 칼럼의 개수와 관계없이 하나의 레코드만 반환하는 쿼리 
+- DERIVED
+  - MySQL 5.5 버전까지는 서브쿼리가 FROM 절에 사용된 경우 항상 select_type이 DERIVED인 실행 계획을 만듬 
+  - MySQL 5.6 버전부터는 옵티마이저 옵션(optimizer_switch 시스템 변수)에 따라 FROM 절의 서브쿼리를 외부 쿼리와 통합하는 형태의 최적화가 수행되기도 함 
+  - 쿼리를 튜닝하기 위해 실행 계획을 확인할 때 가장 먼저 select_type 칼럼의 값이 DERIVED인 것이 있는지 확인해야 함, 서브쿼리를 조인으로 해결할 수 있는 경우라면 서브쿼리보다는 조인을 사용할 것을 강력히 권장함 
