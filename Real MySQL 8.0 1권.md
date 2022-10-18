@@ -823,3 +823,89 @@ GROUP BY e.hire_date \G
   - MySQL 5.5 버전까지는 서브쿼리가 FROM 절에 사용된 경우 항상 select_type이 DERIVED인 실행 계획을 만듬 
   - MySQL 5.6 버전부터는 옵티마이저 옵션(optimizer_switch 시스템 변수)에 따라 FROM 절의 서브쿼리를 외부 쿼리와 통합하는 형태의 최적화가 수행되기도 함 
   - 쿼리를 튜닝하기 위해 실행 계획을 확인할 때 가장 먼저 select_type 칼럼의 값이 DERIVED인 것이 있는지 확인해야 함, 서브쿼리를 조인으로 해결할 수 있는 경우라면 서브쿼리보다는 조인을 사용할 것을 강력히 권장함 
+- partitions 칼럼
+  - 파티션 생성 시 제약 사항(파티션 키로 사용되는 칼럼은 프라이머리 키를 포함한 모든 유니크 인덱스의 일부여야 함)으로 인해 프라이머리 키에 emp_no칼럼과 함께 hire_date 칼럼을 추가해서 테이블을 생성했음 
+  - ```sql
+    create table `tb_range_table`
+    (id int not null,
+    name varchar(10),
+    dept varchar(10),
+    hiredate date not null default '2010-01-01'
+    ) engine=innodb default charset=utf8mb4
+    partition by range(year(hiredate)) (
+    partition p0 values less than(2011) engine=innodb,
+    partition p1 values less than(2012) engine=innodb,
+    partition p2 values less than(2013) engine=innodb,
+    partition p3 values less than(2014) engine=innodb,
+    partition p999 values less than maxvalue engine=innodb);
+    ```
+  - 파티션 프루닝(Partition pruning) : 파티션이 여러 개인 테이블에서 불필요한 파티션을 빼고 쿼리를 수행하기 위해 접근해야 할 것으로 판단되는 테이블만 골라내는 과정 
+  - MySQL을 포함한 대부분의 RDBMS에서 지원하는 파티션은 물리적으로 개별 테이블처럼 별도의 저장 공간을 가지기 때문 
+- type 칼럼
+  - 일반적으로 쿼리를 튜닝할 때 인덱스를 효율적으로 사용하는지 확인하는 것이 중요하므로 실행 계획에서 type 칼럼은 반드시 체크해야 할 중요한 정보
+  - ALL을 제외한 나머지는 모두 인덱스를 사용한 접근 방법, ALL은 인덱스를 사용하지 않고, 테이블을 처음부터 끝까지 읽어서 레코드를 가져오는 풀 테이블 스캔 접근방법, 하나의 단위 SELECT 쿼리는 위의 접근 방법 중에서 단 하나만 사용할 수 있음, index_merge를 제외한 나머지 접근 방법은 하나의 인덱스만 사용함
+  - 실행 계획의 type 칼럼에 표시될 수 있는 값
+    - system
+      - 레코드가 1건만 존재하는 테이블 또는 한 건도 존재하지 않는 테이블을 참조하는 형태의 접근 방법
+      - 이 접근 방법은 InnoDB 스토리지 엔진을 사용하는 테이블에서는 나타나지 않고, MyISAM이나 MEMORY 테이블에서만 사용되는 접근 방법 
+    - const
+      - 테이블의 레코드 건수와 관계없이 쿼리가 프라이머리 키나 유니크 키 칼럼을 이용하는 WHERE 조건절을 가지고 있으며, 반드시 1건을 반환하는 쿼리의 처리 방식
+      - 다른 DBMS에서는 이를 유니크 인덱스 스캔(UNIQUE INDEX SCAN)
+      - 조인의 순서와 관계없이 프라이머리 키나 유니크 키의 모든 칼럼에 대해 동등(Equal) 조건으로 검색(반드시 1건의 레코드만 반환)
+    - eq_ref
+      - 여러 테이블이 조인되는 쿼리의 실행 계획에서만 표시됨, 조인에서 처음 읽은 테이블의 칼럼값을, 그다음 읽어야 할 테이블의 프라이머리 키나 유니크 키 칼럼의 검색 조건에 사용할때를 가리켜 eq_ref라고 함 
+      - 조인에서 첫 번째 읽은 테이블의 칼럼값을 이용해 두 번째 테이블을 프라이머리 키나 유니크 키로 동등(Equal) 조건 검색(두 번째 테이블은 반드시 1건의 레코드만 반환)
+    - ref
+      - eq_ref와는 달리 조인의 순서와 관계없이 사용되며, 또한 프라이머리 키나 유니크 키등의 제약 조건도 없음 
+      - 조인의 순서와 인덱스의 종류에 관계없이 동등(Equal) 조건으로 검색(1건의 레코드만 반환된다는 보장이 없어도 됨) 
+    - fulltext
+      - MySQL 서버의 전문 검색(Full-text Search) 인덱스를 사용해 레코드를 읽는 접근 방법을 의미함 
+    - ref_or_null
+      - ref 접근 방법과 같은데, NULL 비교가 추가된 형태
+    - unique_subquery
+      - WHERE 조건절에서 사용될 수 있는 IN(subquery) 형태의 쿼리를 위한 접근 방법, unique_subquery의 의미 그대로 서브쿼리에서 중복되지 않는 유니크한 값만 반환할 때 이 접근 방법을 사용함 
+    - index_subquery
+      - IN 연산자의 특성상 IN(subquery) 또는 IN(상수 나열) 형태의 조건은 괄호 안에 있는 값의 목록에서 중복된 값이 먼저 제거돼야 함 
+      - 서브쿼리 결과의 중복된 값을 인덱스를 이용해서 제거할 수 있을 때 index_subquery 접근 방법이 사용됨 
+        - unique_subquery : IN (subquery) 형태의 조건에서 subquery의 반환 값에는 중복이 없으므로 별도의 중복 제거 작업이 필요하지 않음 
+        - index_subquery : IN (subquery) 형태의 조건에서 subquery의 반환 값에 중복된 값이 있을 수 있지만 인덱스를 이용해 중복된 값을 제거할 수 있음 
+    - range
+      - 인덱스 레인지 스캔 형태의 접근 방법, range는 인덱스를 하나의 값이 아니라 범위로 검색하는 경우를 의미, 주로 <, >, IS NULL, BETWEEN, IN, LIKE 등의 연산자를 이용해 인덱스를 검색할 때 사용됨
+      - 인덱스 레인지 스캔이라고 하면 const,ref,range라는 세 가지 접근 방법을 모두 묶어서 지칭하는 것 , 인덱스를 효율적으로 사용한다, 작업 범위 결정 조건으로 인덱스를 사용한다라는 표현 모두 이 세가지 접근 방법을 의미함 
+    - index_merge
+      - index_merge 접근 방법은 2개 이상의 인덱스를 이용해 각각의 검색 결과를 만들어낸 후, 그 결과를 병합해서 처리하는 방식
+      - 특징
+        - 여러 인덱스를 읽어야 하므로 일반적으로 range 접근 방법보다 효율성이 떨어짐 
+        - 전문 검색 인덱스를 사용하는 쿼리에서는 index_merge가 적용되지 않는다
+        - index_merge 접근 방법으로 처리된 결과는 항상 2개 이상의 집합이 되기 때문에 그 두 집합의 교집합이나 합집합, 또는 중복 제거와 같은 부가적인 작업이 더 필요함 
+    - index
+      - index 접근 방법은 인덱스를 처음부터 끝까지 읽는 인덱스 풀 스캔을 의미함 
+      - 인덱스는 일반적으로 데이터 파일 전체보다 크기가 작으므로 인덱스 풀 스캔시 풀 테이블 스캔보다 빠르게 처리되며, 쿼리의 내용에 따라 정렬된 인덱스의 장점을 이용할 수 있으므로 훨씬 효율적
+      - (첫 번째 + 두 번째) 조건을 충족하거나 (첫 번째 + 세 번째) 조건을 충족하는 쿼리에서 사용되는 읽기 방식
+        - range나 const,ref 같은 접근 방법으로 인덱스를 사용하지 못하는 경우
+        - 인덱스에 포함된 칼럼만으로 처리할 수 있는 쿼리인 경우(즉, 데이터 파일을 읽지 않아도 되는 경우)
+        - 인덱스를 이용해 정렬이나 그루핑 작업이 가능한 경우(즉, 별도의 정렬 작업을 피할 수 있는 경우) 
+    - ALL
+      - 풀 테이블 스캔을 의미, 테이블을 처음부터 끝까지 전부 읽어서 불필요한 레코드를 제거(체크 조건이 존재할 때) 하고 반환함, 풀 테이블 스캔은 지금까지 설명한 접근 방법으로는 처리할 수 없을 때 가장 마지막에 선택하는 가장 비효율적인 방법
+      - 리드 어헤드(Read Ahead) : 다른 DBMS와 같이 InnoDB도 풀 테이블 스캔이나 인덱스 풀 스캔과 같은 대량의 디스크 I/O를 유발하는 작업을 위해 한꺼번에 많은 페이지를 읽어 들이는 기능을 제공함 
+- Recursive
+  - CTE(Common Table Expression)를 이용해 재귀 쿼리를 작성할 수 있음, MySQL 서버에서는 재귀 쿼리는 WITH 구문을 이용해 CTE를 사용하면 됨 
+  - ```sql
+    WITH RECURSIVE cte (n) AS
+    (
+    SELECT 1
+    UNION ALL
+    SELECT n + 1 FROM cte WHERE n < 5
+    )
+    SELECT * FROM cte;
+    ```
+  - n이라는 칼럼 하나를 가진 cte라는 이름의 내부 임시 테이블을 생성
+  - n칼럼의 값이 1부터 5까지 1씩 증가하게 해서 레코드 5건을 만들어서 cte 내부 임시 테이블에 저장                                     
+- Rematerialize
+  - 래터럴로 조인되는 테이블은 선행 테이블의 레코드별로 서브쿼리를 실행해서 그 결과를 임시 테이블에 저장함, 이 과정을 Rematerializing
+- Using index(커버링 인덱스)
+  - 인덱스만으로 쿼리를 수행할 수 있을 때 실행 계획의 Extra 칼럼에는 Using index라는 메시지가 출력됨, 인덱스만으로 처리되는 것을 커버링 인덱스(Covering index)
+  - Using intersect(...) : 각각의 인덱스를 사용할 수 있는 조건이 AND로 연결된 경우 각 처리 결과를 교집합을 추출해내는 작업을 수행했다는 의미
+  - Using union(...) : 각 인덱스를 사용할 수 있는 조건이 OR로 연결된 경우 각 처리 결과에서 합집합을 추출해내는 작업을 수행했다는 의미
+  - Using sort_union(...) : Using union과 같은 작업을 수행하지만 Using union으로 처리될 수 없는 경우(OR로 연결된 상대적으로 대량의 range 조건들) 이 방식으로 처리됨. Using sort_union과 Using union의 차이점은 Using sort_union은 프라이머리 키만 먼저 읽어서 정렬하고 병합한 이후 비로소 레코드를 읽어서 반환할 수 있다는 것 
+  - Using temporary : MySQL 서버에서 쿼리를 처리하는 동안 중간 결과를 담아 두기 위해 임시 테이블(Temporary table)을 사용함 
