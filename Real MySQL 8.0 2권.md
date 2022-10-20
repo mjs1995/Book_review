@@ -41,3 +41,47 @@
      - INET_ATON() 함수는 문자열로 구성된 IPv4 주소를 정수형으로 반환하는 함수, INET_NTOA() 함수는 정수형의 IPv4 주소를 사람이 읽을 수 있는 형태의 '.'으로 구분된 문자열로 반환하는 함수 
   - JSON 필드 크기(JSON_STORAGE_SIZE)
     - JSON 데이터는 텍스트 기반이지만 MySQL 서버는 디스크의 저장 공간을 절약하기 위해 JSON 데이터를 실제 디스크에 저장할 때 BSON(Binary JSON) 포맷을 사용함
+    - JSON_STORAGE_SIZE() 함수를 제공
+  - JSON 필드 추출(JSON_EXTRACT)
+  - JSON 오브젝트 포함 여부 확인(JSON_CONTAINS)
+    - JSON 도큐먼트 또는 지정된 JSON 경로에 JSON 필드를 가지고 있는지를 확인하는 함수 
+  - JSON 오브젝트 생성(JSON_OBJECT)
+    - RDBMS 칼럼의 값을 이용해 JSON 오브젝트를 생성하는 함수
+  - JSON 칼럼으로 집계
+    - JSON_OBJECTAGG()와 JSON_ARRAYAGG() 함수는 GROUP BY 절과 함께 사용되는 집계 함수로서, RDBMS 칼럼의 값들을 모아 JSON 배열 또는 도큐먼트를 생성하는 함수 
+  - JSON 데이터를 테이블로 변환
+    - JSON_TABLE() 함수는 JSON 데이터의 값들을 모아서 RDBMS 테이블을 만들어 반환함
+- SELECT
+  - Short-Circuit Evaluation
+    - 여러 개의 표현식이 AND 또는 OR 논리 연산자로 연결된 경우 선행 표현식의 결과에 따라 후행 표현식을 평가할지 말지 결정하는 최적화
+    - MySQL 서버는 쿼리의 WHERE 절에 나열된 조건을 순서대로 Short-circuit Evaluation 방식으로 평가해서 해당 레코드를 반환해야 할지 말지를 결정함
+    - WHERE 절의 조건 중에서 인덱스를 사용할 수 있는 조건이 있다면 Short-circuit Evaluation과는 무관하게 MySQL 서버는 그 조건을 가장 최우선으로 사용함 
+    - MySQL 서버에서 쿼리를 작성할 때 가능하면 복잡한 연산 또는 다른 테이블의 레코드를 읽어야 하는 서브쿼리 조건 등은 WHERE 절의 뒤쪽으로 배치하는 것이 성능상 도움이 될 것 
+    - WHERE 조건 중에서 인덱스를 사용할 수 있는 조건은 WHERE 절의 어느 위치에 나열되든지 그 순서에 관계없이 가장 먼저 평가되기 때문에 고려하지 않아도 됨
+- DISTINCT
+  - LIMIT
+    - ORDER BY나 GROUP BY 또는 DISTINCT가 인덱스를 이용해 처리될 수 있다면 LIMIT 절은 꼭 필요한 만큼의 레코드만 읽게 만들어주기 때문에 쿼리의 작업량을 상당히 줄여줌
+- JOIN
+  - JOIN 순서와 인덱스
+    - 조인 작업에서 드라이빙 테이블을 읽을 때는 인덱스 탐색 작업을 단 한 번만 수행하고, 그 이후부터는 스캔만 실행하면됨, 하지만 드리븐 테이블에서는 인덱스 탐색 작업과 스캔 작업을 드라이빙 테이블에서 읽은 레코드 건수만큼 반복함 
+    - 드라이빙 테이블과 드리븐 테이블이 1:1로 조인되더라도 드리븐 테이블을 읽는 것이 훨씬 더 큰 부하를 차지함 
+    - 옵티마이저는 항상 드라이빙 테이블이 아니라 드리븐 테이블을 최적으로 읽을 수 있게 실행 계획을 수립함 
+    - 드리븐 테이블을 풀 테이블 스캔하는 실행 계획으로 조인이 실행됐기 때문에 옵티마이저가 조인 버퍼를 사용함
+  - OUTER JOIN의 성능과 주의사항
+    - ```sql
+      SELECT *
+      FROM employees e
+        LEFT(->INNER) JOIN dept_manger mgr ON mgr.emp_no = e.emp_no
+      WHERE mgr.dept_no = 'd001';
+      ```
+    - ON 절에 조인 조건을 명시했지만 아우터로 조인되는 테이블인 dept_manager의 dept_no='d001' 조건을 WHERE 절에 명시한 것은 잘못된 조인 방법, LEFT JOIN이 사용된 쿼리는 WHERE 절의 조건 때문에 MySQL 옵티마이저가 LEFT JOIN을 다음 쿼리와 같이 INNER JOIN으로 변환해서 실행시킴
+    - ```sql
+      SELECT *
+      FROM employee e 
+        LEFT JOIN dept_manger mgr on mgr.emp_no = e.emp_no AND mgr.dept_no='d001';
+      ``` 
+  - 지연된 조인(Delayed join)
+    - 조인의 결과를 GROUP BY하거나 ORDER BY하면 조인을 실행하기 전의 레코드에 GROUP BY나 ORDER BY를 수행하는 것보다 많은 레코드를 처리해야 함 
+    - 지연된 조인이란 조인이 실행되기 이전에 GROUP BY나 ORDER BY를 처리하는 방식을 의미함, 지연된 조인은 주로 LIMIT이 함께 사용된 쿼리에서 더 큰 효과를 얻을 수 있음
+    - 지연된 조인은 조인의 개수를 줄이는 것뿐만 아니라 GROUP BY나 ORDER BY 처리가 필요한 레코드의 전체 크기를 줄이는 역할도 함 
+  - 
