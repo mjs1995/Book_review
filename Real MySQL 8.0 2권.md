@@ -131,3 +131,57 @@
       - SKIP LOCKED 옵션은 SELECT하려는 레코드가 다른 트랝개션에 의해 이미 잠겨진 상태라면 에러를 반환하지 않는 잠긴 레코드는 무시하고 잠금이 걸리지 않은 레코드만 가져옴 
       - SKIP LOCKED 절을 가진 SELECT 구문은 확정적이지 않은 (NOT-DETERMINISTIC) 쿼리가 됨 
         - 확정적(DETERMINISTIC)이란 말의 의미는 입력이 동일하면 시점에 관계없이 동일한 결과를 반환하는 것을 의미함, SKIP LOCKED 절을 가진 SELECT 쿼리는 실행하는 시점에 따라(아무런 데이터 변경이 없는 상태에서도) 각 트랜잭션의 간섭에 의해 다른 결과를 반환할 수도 있는데, 이를 비확정적(NOT-DETERMINISTIC)
+- INSERT 
+  - INSERT IGNORE
+    - INSERT 문장의 IGNORE 옵션은 저장하는 레코드의 프라이머리 키나 유니크 인덱스 칼럼의 값이 이미 테이블에 존재하는 레코드와 중복되는 경우, 그리고 저장하는 레코드의 칼럼이 테이블의 칼럼과 호환되지 않는 경우 모두 무시하고 다음 레코드를 처리할 수 있게 해줌
+  - INSERT ... ON DUPLICATE KEY UPDATE
+    - 프라이머리 키나 유니크 인덱스의 중복이 발생하면 UPDATE 문장의 역할을 수행하게 해줌 
+  - LOAD DATA 명령 주의 사항
+    - MySQL 서버의 LOAD DATA 명령의 단점
+      - 단일 스레드로 실행
+      - 단일 트랜잭션으로 실행
+  - Auto-Increment 칼럼
+    - AUTO_INC 잠금 : MySQL 서버에서는 자동 증가 값의 채번을 위해서는 잠금이 필요함 
+- UPDATE와 DELETE
+  - JOIN UPDATE
+    - 두 개 이상의 테이블을 조인해 조인된 결과 레코드를 변경 및 삭젷는 쿼리를 JOIN UPDATE라고 함
+    - 조인된 테이블 중에서 특정 테이블의 칼럼값을 다른 테이블의 칼럼에 업데이트해야 할 때 주로 조인 업데이트를 사용함
+    - 일반적으로 JOIN UPDATE는 조인되는 모든 테이블에 대해 읽기 참조만 되는 테이블은 읽기 잠금이 걸리고, 칼럼이 변경되는 테이블은 쓰기 잠금이 걸림 
+    - JOIN UPDATE 문장이 웹 서비스 같은 OLTP 환경에서는 데드락을 유발할 가능성이 높으므로 너무 빈번하게 사용하는 것은 피하는 것이 좋음. 배치 프로그램이나 통계용 UPDATE 문장에서는 유용하게 사용할 수 있음
+- 데이터베이스 변경
+  - 다른 DBMS에서는 스키마와 데이터베이스를 구분해서 관리하지만 MySQL 서버에서는 스키마와 데이터베이스는 동격의 개념 
+- 테이블 스페이스 변경
+  - 제너럴 테이블스페이스 : 여러 테이블의 데이터를 한꺼번에 저장하는 테이블스페이스
+- 테이블 변경
+  - SHOW CREATE TABLE 명령은 칼럼의 목록과 인덱스, 외래키 정보를 동시에 보여주기 때문에 SQL을 튜닝하거나 테이블의 구조를 확인할 때 주로 이 명령을 사용함 
+  - 테이블 리빌드 작업은 주로 레코드의 삭제가 자주 발생하는 테이블에서 데이터가 저장되지 않은 빈 공간(프래그멘테이션, Fragmentation)을 제거해 디스크 사용 공간을 줄이는 역할을 함 
+  - 테이블 명 변경
+    - 일정 주기로 테이블을 교체(Swap)해야 하는 경우 존재
+    - 여러 테이블의 RENAME 명령을 하나의 문장으로 묶어서 실행할 수 있음
+      - > RENAME TABLE batch TO batch_old, batch_new TO batch;
+      - MySQL 서버는 RENAME TABLE 명령에 명시된 모든 테이블에 대해 잠금을 걸고 테이블의 이름 변경 작업을 실행하게 됨, 응용 프로그램의 입장에서 보면 batch 테이블을 조회하려고 할 때 이미 잠금이 걸려있기 때문에 대기함 
+  - 테이블 상태 조회
+    - MySQL의 모든 테이블은 만들어진 시간, 대략의 레코드 건수, 데이터 파일의 크기 등의 정보를 가지고 있음. 또한 데이터 파일의 버전이나 레코드 포맷 등과 같이 자주 사용되지는 않지만 중요한 정도보 가지고 있는데 이러한 정보를 조회할 수 있는 명령어는 SHOW TABLE STATUS ...
+    - > SHOW TABLE STATUS LIKE 'employees' \G
+      - Like 패턴관 같은 조건을 사용해 특정 테이블의 상태만 조회하는 것도 가능
+      - \G는 레코드의 칼럼을 라인당 하나씩만 표현하게 하는 옵션, \G는 SQL 문장의 끝을 의미하기도 하기 때문에 \G가 있으면 별도로 ","를 붙이지 않아도 쿼리 입력이 종료된 것으로 간주함 
+    - ```sql
+      SELECT * FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = 'employees' AND TABLE_NAME ='employees' \G
+      ```
+      - information_schema 데이터베이스에는 MySQL 서버가 가진 스키마들에 대한 메타 정보를 가진 딕셔너리 테이블이 관리됨 
+      - information_schema 데이터베이스에 존재하는 테이블들은 실제로 존재하는 테이블이 아니라 MySQL 서버가 시작되면서 데이터베이스와 테이블 등에 대한 다양한 메타 정보를 모아서 메모리에 모아두고 사용자가 참조할 수 있는 테이블 
+    - ```sql
+      SELECT TABLE_SCHEMA,
+             SUM(DATA_LENGTH)/1024/1024 as data_size_mb
+             SUM(INDEX_LENGTH)/1024/1024 as index_size_mb
+      FROM information_schema.TABLES
+      GROUP BY TABLE_SCHEMA;
+      ```
+    - information_schema 데이터베이스의 테이블
+      - 데이터베이스 객체에 대한 메타 정보
+      - 테이블과 칼럼에 대한 간략한 통계 정보
+      - 전문 검색 디버깅을 위한 뷰(view)
+      - 압축 실행과 실패 횟수에 대한 집계 
+  - 테이블 구조 복사
+    - 데이터는 복사하지 않고 테이블의 구조만 동일하게 복사하는 명령으로 CREATE TABLE ... LIKE를 사용하면 구조가 같은 테이블들을 손쉽게 생성할 수 있음
