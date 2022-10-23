@@ -185,3 +185,55 @@
       - 압축 실행과 실패 횟수에 대한 집계 
   - 테이블 구조 복사
     - 데이터는 복사하지 않고 테이블의 구조만 동일하게 복사하는 명령으로 CREATE TABLE ... LIKE를 사용하면 구조가 같은 테이블들을 손쉽게 생성할 수 있음
+- 칼럼 변경
+  - 칼럼 추가
+  - ```sql
+    --// 테이블의 제일 마지막에 새로운 칼럼을 추가
+    ALTER TABLE employees ADD COLUMN emp_telno VARCHAR(20),
+    ALGORITHM = INSTANT;
+    --// 테이블의 중간에 새로운 칼럼을 추가 
+    ALTER TABLE employees ADD COLUMN emp_telno VARCHAR(20) AFTER emp_no,
+    ALGORITHM=INPLACE, LOCK=NONE;
+    ```
+- 인덱스 변경
+  - ```sql
+    --// 1.index_new라는 이름으로 새로운 인덱스 생성
+    ALTER TABLE employees
+    ADD INDEX index_new (first_name, last_name),
+    ALGORITHM = INPLACE, LOCK=NONE;
+    
+    --// 2.기존 인덱스(ix_firstname)를 삭제하고, 동시에 새로운 인덱스(index_new)의 이름을 ix_firstname으로 변경
+    ALTER TABLE employees
+    DROP INDEX ix_firstname,
+    RENAME INDEX index_new TO ix_firstname,
+    ALGORITHM = INPLACE, LOCK=NONE;
+    ```
+- 프로세스 조회 및 강제 종료
+  - MySQL 서버에 접속된 사용자의 목록이나 각 클라이언트 사용자가 현재 어떤 쿼리를 실행하고 있는지는 SHOW PROCESSLIST 명령으로 확인할 수 있음 
+- 활성 트랜잭션 조회
+  - ```sql
+    --// 트랜잭션이 5초 이상 활성 상태로 남아있는 프로세스만 조사하는 쿼리 
+    SELECT trx_id,
+    (SELECT CONCAT(user,'@',host)
+    FROM information_schema.processlist
+    WHERE id=trx_mysql_thread_id) AS source_info,
+    trx_state,
+    trx_started,
+    now(),
+    (unix_timestamp(now()) - unix_timestamp(trx_started)) AS lasting_sec,
+    trx_requested_lock_id,
+    trx_wait_started,
+    trx_mysql_thread_id,
+    trx_tables_in_use,
+    trx_tables_locked
+    FROM information_schema.innodb_trx
+    WHERE (unix_timestamp(now()) - unix_timestamp(trx_started)) > 5 \G
+    ```
+  - 평상시보다 오랜 시간 트랜잭션이 활성 상태를 유지하고 있다면 information_schema.innodb_trx 테이블에서 모든 정보를 조회해서 살펴보면 이 트랜잭션이 얼마나 많은 레코드를 변경했고 얼마나 많은 레코드를 잠그고 있는지 확인할 수 있음
+  - > SELECT * FROM information_schema.innodb_trx WHERE trx_id=2300 \G
+  - 어떤 레코드를 잠그고 있는지는 performance_schema.data_locks 테이블을 참조하면 됨
+  - > SELECT * FROM data_locks \G
+  - 장시간에 걸쳐 트랜잭션이 쿼리를 실행 중인 상태에서 그 쿼리만 강제 종료시키면 커넥션이나 트랜젹션은 여전히 활성 상태로 남아있게 됨, 응용 프로그램에서 쿼리의 에러를 감지해서 트랜잭션을 롤백하게 돼 있다면 다음과 같이 쿼리만 종료하면 됨 
+  - > KILL QUERY 14;
+  - 응용 프로그램에서 쿼리 에러에 대한 핸들링이 확실하지 않다면 쿼리를 종료시키는 것보다 커넥션 자체를 강제 종료시키는 방법이 더 안정적일 수 있음
+  - > KILL 14;
