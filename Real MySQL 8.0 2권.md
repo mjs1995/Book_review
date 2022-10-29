@@ -415,3 +415,42 @@
     - 배치 프로그램에서 첫 번째 쿼리의 결과를 이용해 두 번째 쿼리를 실행해야 할 때가 대표적인 예 
   - 스토어드 함수
     - 스토어드 함수는 하나의 SQL 문장으로 작성이 불가능한 기능을 하나의 SQL 문장으로 구현해야 할 때 사용함   
+- 트리거
+  - 트리거는 테이블의 레코드가 저장되거나 변경될 때 미리 정의해둔 작업을 자동으로 실행해주는 스토어드 프로그램, 데이터의 변화가 생길 때 다른 작업을 기동해주는 방아쇠인 것 
+  - 칼럼의 유효성 체크나 다른 테이블로의 복사나 백업, 계산된 결과를 다른 테이블에 함께 업데이트 하는 등의 작업을 위해 트리거를 자주 사용함 
+  - 트리거 생성
+    - ```sql
+      CREATE TRIGGER on_delete BEFORE DELETE ON employees
+      FOR EACH ROW
+      BEGIN
+      DELETE FROM salaries WHERE emp_no=OLD.emp_no;
+      END;;
+      ```
+- 이벤트
+  - 주어진 특정한 시간에 스토어드 프로그램을 생성할 수 있는 스케줄러 기능 뜻함 
+  - 이벤트 생성
+    - 일회성 이벤트
+      - 단 한 번 실행되는 일회성 이벤트를 등록하려면 ON SCHEDULE AT절을 명시하면 됨 
+      - ```sql
+        CREATE EVENT onetime_job
+        ON SCHEDULE AT CURRENT_TIMESTAMP + INTERVAL 1 HOUR
+        DO
+        INSERT INTO daily_rank_log VALUES (NOW(), 'Done');
+        ```
+    - 반복성 이벤트
+      - ```sql
+        CREATE EVENT daily_ranking
+        ON SCHEDULE EVERY 1 DAY STARTS '2020-09-07 01:00:00' ENDS '2021-01-01 00:00:00'
+        DO
+        INSERT INTO daily_rank_log VALUES (NOW(), 'DONE');
+        ```
+- 핸들러와 컨디션을 이용한 에러 핸들링
+  - SQLSTATE와 에러 번호(Error No)
+    - ERROR ERROR-NO (SQL-STATE) : ERROR-MESSAGE
+      - ERROR-NO 
+        - 4자리 (현재까지는) 숫자 값으로 구성된 에러코드, MySQL에서만 유효한 에러 식별 번호
+        - 1146이라는 에러 코드 값은 MySQL에서는 테이블이 존재하지 않는다라는 것을 의미하는데 다른 DBMS와 호환되는 에러 코드는 아님
+      - SQL-STATE
+        - 다섯 글자와 알파벳과 숫자(Alpha-Numeric)로 구성되며 에러뿐만 아니라 여러 가지 상태를 의미하는 코드 
+        - DBMS 종류가 다르더라도 ANSI SQL 표준을 준수하는 DBMS(ODBC, JDBC 포함)에서는 모두 똑같은 값과 의미를 가짐. 이 값은 표준값이라서 DBMS 벤더에 의존적이지 않음
+  - 다른 에러도 중복된 에러 번호를 지닌 것이 많기 때문에 에러 번호보다는 SQLSTATE를 핸들러에 사용하는 것이 좋음
