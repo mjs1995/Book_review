@@ -520,3 +520,40 @@
 - JSON 타입
   - 저장 방식
     - MySQL 서버는 내부적으로 JSON 타입의 값을 BLOB 타입에 저장함, JSON 칼럼에 저장되는 값은 사용자가 입력한 값 그대로 저장하는 것이 아니라 바이너리 포맷이 BSON 타입으로 변환해서 저장함 
+- 가상 칼럼(파생 칼럼)
+  - 다른 DBMS에서는 가상 칼럼(Virtual Column), MySQL 서버에서는 Generated Column 
+  - MySQL 서버의 가상 칼럼은 크게 가상 칼럼(Virtual Column)과 스토어드 칼럼(Stored Column)으로 구분할 수 있음 
+  - ```sql
+    --// 가상 칼럼(Virtual Column) 사용 예제
+    CREATE TABLE to_virtual_column(
+      id INT NOT NULL AUTO_INCREMENT,
+      price DECIMAL(10,2) NOT NULL DEFAULT '0.00',
+      quantity INT NOT NULL DEFAULT 1,
+      total_price DECIMAL(10,2) AS (quantity * price) VIRTUAL,
+      PRIMARY KEY (id)
+    );
+    
+    --// 스토어드 칼럼(Stored Column) 사용 예제
+    CREATE TABLE to_stored_column(
+      id INT NOT NULL AUTO_INCREMENT,
+      price DECIMAL(10,2) NOT NULL DEFAULT '0.00',
+      quantity INT NOT NULL DEFAULT 1,
+      total_price DECIMAL(10,2) AS (quantity * price) STORED,
+      PRIMARY KEY (id)
+    );
+    ```
+  - VIRTUAL이나 STORED 키워드가 정의되지 않으면 MySQL 서버는 기본 모드인 VIRTUAL로 칼럼을 생성함. 가상 칼럼은 다른 칼럼의 값을 참조해서 계산된 값을 관리하기 때문에 항상 AS 절 뒤에는 계산식이나 데이터 가공을 위한 표현식을 정의함 
+  - 가상 칼럼과 스토어드 칼럼 모두 다른 칼럼의 값을 참조해서 새로운 값을 만들어 관리한다는 공통점이 있음, 기존 칼럼의 값을 계산해서 관리하는 파생된 칼럼인 것
+  - 차이점
+    - 가상 칼럼
+      - 칼럼의 값이 디스크에 저장되지 않음
+      - 칼럼의 구조 변경은 테이블 리빌드를 필요로 하지 않음
+      - 칼럼의 값은 레코드가 읽히기 전 또는 BEFORE 트리거 실행 직후에 계산되어 만들어짐 
+    - 스토어드 칼럼
+      - 칼럼의 값이 물리적으로 디스크에 저장됨
+      - 칼럼의 구조 변경은 다른 일반 테이블과 같이 필요 시 테이블 리빌드 방식으로 처리됨
+      - INSERT와 UPDATE 시점에서만 칼럼의 값이 계산됨 
+  - 가상 칼럼과 스토어드 칼럼의 가장 큰 차이는 계산된 칼럼의 값이 디스크에 실제 저장되는지 여부
+  - 가상 칼럼은 데이터를 조회하는 시점에 매번 계산되기 때문에 가상 칼럼의 값을 계산하는 과정이 복잡하고 시간이 오래 걸린다면 스토어드 칼럼으로 변경하는 것이 성능향상에 도움읻 됨
+  - 계산 과정이 빠른 반면 상대적으로 결과가 많은 저장 공간을 차지한다면 스토어드 칼럼보다는 가상 칼럼을 선택하는 것이 저장 공간의 절약과 메모리의 효율을 높일 수 있을 것 
+  - CPU 사용량을 조금 높여서 디스크 부하를 낮출 것이냐, 디스크 사용량을 조금 높여서 CPU 사용량을 낮출 것이냐
