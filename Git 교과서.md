@@ -40,3 +40,17 @@
   - :wq! : 강제로 덮어쓰고 종료
   - h,j,k,l : 커서 좌,하,상,우 이동
   - 상,하,좌,우 방향키 - 커서 좌,하,상,우 이동 
+- Git 저장소 만들기 - git init
+  - Git Bash를 이용해서 원하는 폴더에 접근한뒤 아래 명령어로 Git 저장소를 생성함 
+- Git 사용자 정보 설정
+  - git config 명렁어를 이용해서 사용자 이름과 이메일을 설정함
+  - git config --global user.name "test name"
+  - git config --global user.email testmail@gmail.com
+- Git 파일 변경 내역 추가
+  - git add 명령어를 이용해서 파일 변경 내역을 추가해줌
+- Git 현재 작업내역을 확인 - git status
+- git 변경 내역 반영 - git commit -m "text"
+- Git 커밋내역 확인 - git log 
+- GitHub 원격 저장소 연결 - git remote add origin https:--.git
+- GitHub 연결된 저장소 확인 - git remote -v 
+- GitHub 원격저장소에 변경 내역 반영 - git push origin master 
