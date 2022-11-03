@@ -54,3 +54,17 @@
 - GitHub 원격 저장소 연결 - git remote add origin https:--.git
 - GitHub 연결된 저장소 확인 - git remote -v 
 - GitHub 원격저장소에 변경 내역 반영 - git push origin master 
+
+# Git 명령어
+- Git 원격 저장소의 내용을 로컬에 받아오기 - git clone 주소.git
+  - git clone 명령어를 이용해서 GitHub에 올라가 있는 원격저장소의 내용을 로컬에 받아올 수 있음 
+- Git 원격 저장소의 내역을 로컬 저장소에 반영하기 - git pull
+- Git 잘못 commit한 내역을 되돌리기 - git revert
+  - git revert "되돌리고 싶은 commit hash"
+  - commit의 hash를 확인하고 싶을때는 git log 명령어 활용 
+- Branch 생성의 필요성
+  - 하나의 소스코드를 여러명이 동시에 개발하다보면 충돌이 일어날 수 있음, Brnach를 통해 각 저장소의 가지를 나눠줘야함 
+- Git 현재 작업중인 branch 변경하기 - git checkout 
+- Git branch 목록 확인하기 - git branch 
+- Git branch 삭제하기 - git branch -D [브랜치명]
+  - Git branch 삭제내역 원격 저장소에 반영하기 : git push origin :[브랜치명] 
