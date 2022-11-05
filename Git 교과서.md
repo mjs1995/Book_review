@@ -68,3 +68,26 @@
 - Git branch 목록 확인하기 - git branch 
 - Git branch 삭제하기 - git branch -D [브랜치명]
   - Git branch 삭제내역 원격 저장소에 반영하기 : git push origin :[브랜치명] 
+
+# GitHub 기본기능 
+- README.md : GitHub 저장소에 대한 기본 설명으로 보여지는 파일 
+- Markdown
+  - 일반 텍스트 기반의 경량 마크업 어너, 일반 텍스트로 서식이 있는 문서를 작성하는 데 사용되며, 일반 마크업 언어에 비해 문법이 쉽고 간단한 것이 특징 
+  - HTML과 리치 텍스트(RTF) 등 서식 문서로 쉽게 변환되기 때문에 응용 소프트웨어와 함께 배포되는 README 파일이나 온라인 게시물 등에 많이 사용됨 
+- Issue
+  - GitHub Repository의 Issue 탭에 Issue를 생성할 수 있음
+  - Issue 생성을 통해 버그를 제보하거나 다른 작업자들과 공유할 내용들을 Open 할 수 있음 
+  - 또한 각 Issue 별로 tag를 설정할 수 있음
+  - 관리자는 Issue를 확인하고 Issue를 Close 상태로 변경할 수 있음 
+- GitHub Wiki - 저장소에 대한 설명
+  - 위키는 불특정 다수가 협업을 통해 직접 내용과 구조를 수정할 수 있는 웹사이트를 일컫음
+  - GitHub의 Wiki를 통해 프로젝트에 대한 설명을 작성할 수 있음 
+  - ex) vuejs github wiki 참고
+- GitHub Gist
+  - GitHub은 본격적인 저장소 관리 외에도 간편하게 하나의 파일의 변경이력을 손쉽게 관리하고 공유 할 수 있는 GitHub Gist라는 서비스를 제공하고 있음 
+- GitHub Star : 마음에 드는 저장소에 Star를 눌러서 관심 저장소로 설정할 수 있음 
+- GitHub Watch : 마음에 드는 저장소에 Watch를 눌러서 관심 저장소의 변경내역을 추적할 수 있음 
+- GitHub Milestones로 프로젝트 관리하기
+  - GitHub Milestones에서 새로운 Milestone을 생성함
+  - Milestone에 특정 일자까지 진행할 목표를 설정할 수 있음
+  - 또한 Issue를 생성할 때 Issue별로 Milestone을 할당할 수 있음
