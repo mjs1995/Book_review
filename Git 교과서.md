@@ -91,3 +91,40 @@
   - GitHub Milestones에서 새로운 Milestone을 생성함
   - Milestone에 특정 일자까지 진행할 목표를 설정할 수 있음
   - 또한 Issue를 생성할 때 Issue별로 Milestone을 할당할 수 있음
+
+# 소프트웨어 버전관리 - Git Flow
+- 소프트웨어 버전 관리 - Patch
+  - 지속적인 소프트웨어 개발을 위해서는 효율적인 소프트웨어 버전관리가 필요함
+  - 일반적으로 Major, Minor, Patch 이렇게 3개의 구분 기호를 통해 버전을 관리함 
+- 소프트웨어 버전명을 기록하기 - tag
+  - 버전관리를 위해서는 각 버전에 대한 기록이 필요함
+  - 이때 현재 소스코드 상태에 대한 기록을 git tag 명령어를 이용해서 생성할 수 있음 
+  - git tag -a v0.0.1
+  - git push origin v0.0.1 - 생성된 tag를 원격저장소에 반영하기 위해서는 tag명을 push해줌
+  - git tag -d 명령어를 이용해서 tag 삭제 
+- Branch 생성 전략 - Git Flow
+  - 효율적인 협업과 소프트웨어 개발을 위한 다양한 Branch 생성 전략들이 있음
+  - 이 중에서 가장 유명한 Branch 생성 전략인 Vincent Driesser이 제안한 Git Flow 전략 
+  - Git Flow의 5개의 branch
+    - master : 제품으로 출시될 수 있는 브랜치
+    - develop : 다음 출시 버전을 개발하는 브랜치
+    - feature : 기능을 개발하는 브랜치
+    - release : 이번 출시 버전을 준비하는 브랜치
+    - hotfix : 출시 버전에서 발생한 버그를 수정하는 브랜치 
+  - 전략
+    - 일단 master 브랜치에서 시작함
+    - 동일한 브랜치를 develop에도 생성을 함. 개발자들은 이 develop 브랜치에서 개발을 진행함
+    - 개발을 진행하다가 회원가입, 장바구니 등의 기능 구현이 필요할 경우 A개발자는 develop 브랜치에서 feature 브랜치를 하나 생성해서 회원가입 기능을 구현하고 B개발자도 develop 브랜치에서 feature 브랜치를 하나 생성해서 장바구니 기능을 구현함 
+    - 완료된 feature 브랜치는 검토를 거쳐 다시 develop 브랜치에 합침(Merge)
+    - 이제 모든 기능이 완료되면 develop 브랜치를 release 브랜치로 만듬. 그리고 QA(품질검사)를 하면서 보완점을 보완하고 버그를 픽스함
+    - 모든 것이 완료되면 이제 release 브랜치를 master 브랜치와 develop 브랜치로 보냄. master 브랜치에서 버전추가를 위해 tag를 하나 생성하고 배포를 함 
+    - 배포를 했는데 미처 발견하지 못한 버그가 있을 경우 hotfixes 브랜치를 만들어 긴급 수정 후 태그를 생성하고 바로 수정 배포를 함 
+- Develop branch와 feature branch
+  - develop : 다음 출시 버전을 개발하는 브랜치
+  - feature : 기능을 개발하는 브랜치
+  - develop branch로부터 feature branch를 생성함 
+- 소프트웨어 출시 과정
+  - 신규 기능(Feature) 개발 - 신규 기능들을 모아서 새로운 Version을 생성 - QA를 통해 문제가 없는지 검증 - 문제가 없는지 확인되면 해당 Version을 Release 
+- Git의 원리
+  - Git에서 파일을 관리하는 Working directory, Staging Area, Repository
+  - Working directory ->(git add) Staging Area ->(git commit) -> Repository 
