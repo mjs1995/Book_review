@@ -128,3 +128,20 @@
 - Git의 원리
   - Git에서 파일을 관리하는 Working directory, Staging Area, Repository
   - Working directory ->(git add) Staging Area ->(git commit) -> Repository 
+
+# Git 중급명령어
+- Git 두개의 branch의 내용을 합치기 - git merge 
+  - 먼저 합칠 대상이 되는 branch로 이동(git checkout master)
+  - git merge 명령어를 이욯애서 합치고 싶은 branch를 지정해줌(git merge developer2) 
+- 두개의 branch를 합치는 과정에서 발생한 conflict 
+  - conflict이 발생할 경우 수동으로 conflict를 해결해서 새로운 commit을 만들어주어야 함 
+- Git 이전 commit 내역 수정하기 - amend
+  - 작업을 진행하다 실수로 commit에 포함시켜야할 내용을 빠트린 경우
+  - 새로운 commit을 만들어서 해당 내용을 추가할 수도 있지만, amend 옵션을 이용해서 이전 commit 내용에 새로운 내용을 추가할 수도 있음
+  - git commit --ammend
+- Git 변경사항을 잠시 keep 해두기 - git stash
+  - 특정 branch에서 작업을 진행중에 다른 branch에서 작업을 요청 받는 경우가 생길 때
+  - 지금까지 작업한 내역을 commit하긴 조금 애매할 경우, 변경사항을 잠시 keep 해두는 git stash 명령어를 사용할 수 있음 
+  - git stash save 명령어로 작업 내역을 stash에 저장함 - git stash save
+  - git stash list 명령어로 stash에 저장된 내용을 볼 수 있음 - git stash list
+  - git stash pop 명령어를 이용해서 stash에 저장해놨던 내용을 다시 가져올 수 있음 - git stash pop
