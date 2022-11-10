@@ -891,3 +891,59 @@
       - Clone 플러그인을 통해 수행되는 복제 작업에 대한 정보를 제공함 
     - 기타 테이블
       - 앞서 분류된 범주들에 속하지 않는 나머지 테이블들을 의미함 
+- Performance 스키마 설정
+  - 사용자는 performance 스키마에 대해 크게 두 가지 부분으로 나누어 설정할 수 있음
+    - 메모리 사용량 설정
+    - 데이터 수집 및 저장 설정
+  - Performance 스키마에서는 수집한 데이터들을 모두 메모리에 저장하므로 Performance 스키마가 MySQL 서버 동작에 영향을 줄 만큼 과도하게 메모리를 사용하지 않게 제한하는 것이 좋음. Performance 스키마를 수집 가능한 모든 이벤트에 대해 데이터를 수집하도록 설정하는 것보다는 사용자가 필요로 하는 이벤트들에 대해서만 수집하도록 설정하는 편이 MySQL 내부적인 오버헤드를 줄이고 MySQL 서버의 성능 저하를 유발하지 않음
+  - 메모리 사용량 설정
+    - Performance 스키마에 저장되는 데이터양은 Performance 스키마의 메모리 사용량과 직결되며, 따라서 메모리 사용량 설정은 곧 얼마만큼의 데이터를 저장할 것인지를 설정하는 것 
+  - 데이터 수집 및 저장 설정
+    - 사용자는 Performance 스키마가 어떤 대상에 대해 모니터링하며 어떤 이벤트들에 대한 데이터를 수집하고 또 수집한 데이터를 어느 정도 상세한 수준으로 저장하게 할 것인지를 제어할 수 있음. Performance 스키마는 생산자(Product)-소비자(Consumer) 방식으로 구현되어 내부적으로 데이터를 수집하는 부분과 저장하는 부분으로 나누어 동작함 
+    - 사용자는 수집 부분과 관련해서 모니터링 대상들과 수집 대상 이벤트들을 설정할 수 있으며, 저장 부분과 관련해서는 데이터를 얼마나 상세하게 저장할 것인지 데이터 저장 레벨을 설정할 수 있음 
+    - 런타임 설정 적용 
+      - 저장 레벨 설정(setup_consumers)
+        - Performance 스키마에서 데이터를 수집하고 저장하는 데 가장 큰 영향을 미치는 설정은 저장 레벨 설정 
+        - 저장 레벨이 설정돼 있으면 Performance 스키마에서는 설정된 모니터링 대상 및 수집 대상 이벤트들을 바탕으로 데이터를 수집하고 설정된 저장 레벨에 따라 적절한 테이블에 수집한 데이터를 저장함 
+      - 수집 대상 이벤트 설정(setup_instruments)
+      - 모니터링 대상 설정(setup_objects, setup_threds, setup_actors)
+    - Performance 스키마 설저의 영구 적용
+      - MySQL 서버가 동작 중인 상태에서 사용자가 setup 테이블을 통해 동적으로 변경한 Performance 스키마 설정은 MySQL 서버가 재시작되면 모두 초기화됨
+- Sys 스키마
+  - Performance 스키마의 어려운 사용법을 해결해주는 솔루션 
+  - Performance 스키마는 사용자에게 MySQL 서버 내부에서 발생하는 이벤트들에 대해 다양하고 상세한 정보를 제공함. Performance 스키마에는 설정 테이블들을 포함해 백여 개에 달하는 테이블이 존재하며, 이로 인해 어느 테이블에 어떤 정보가 저장돼 있는지 익숙하지 않은 사용자들은 원하는 정보를 얻기까지 다소 시간이 걸릴 수 있음
+  - Sys 스키마는 Performance 스키마의 이 같은 불편한 사용성을 보완하고자 도입됐으며, Performance 스키마 및 Information 스키마에 저장돼 있는 데이터를 사용자들이 더욱 쉽게 이해할 수 있는 형태로 출력하는 뷰와 스토어드 프로시저, 함수들을 제공함 
+- Sys 스키마 구성
+  - 테이블 
+    - Sys 스키마에서 일반 테이블로는 Sys 스키마의 데이터베이스 객체에서 사용되는 옵션의 정보가 저장돼 있는 테이블 하나만 존재하며, InnoDB 스토리지 엔진으로 설정돼 있어 데이터가 영구적으로 보존됨 
+    - > SELECT * FROM sys_config;
+  - 뷰
+    - Sys 스키마의 뷰는 Formatted-View와 Raw-View로 구분되며, Formatted-View는 출력되는 결과에서 시간이나 용량과 같은 값들을 사람이 쉽게 읽을 수 있는(Human Readable) 수치로 변환해서 보여주는 뷰, Raw-View는 "x$"라는 접두사로 시작하는데 이 뷰들은 데이터를 저장된 원본 형태 그대로 출력해서 보여줌 
+  - 스토어드 프로시저
+    - 사용자는 Sys 스키마에서 제공하는 스토어드 프로시저들을 사용해 Performance 스키마의 설정을 손쉽게 확인 및 변경할 수 있으며, MySQL 서버 상태와 현재 실행 중인 쿼리들에 대한 종합적으로 분석한 보고서 형태의 데이터도 확인할 수 있음 
+    - statement_performance_analyzer(in_action_ENUM, in_table VARCHAR(129), in_views SET) - 서버에서 실행 중인 쿼리들에 대한 분석 보고서를 출력함 
+  - 함수
+    - Sys 스키마에서는 값의 단위를 반환하고, Performance 스키마의 설정 및 데이터를 조회하는 등 다양한 기능을 가진 함수를 제공함. Sys 스키마의 뷰와 프로시저에서 사용됨 
+- Performance 스키마 및 Sys 스키마 활용 예제
+  - 호스트 접속 이력 확인
+    - MySQL 서버가 구동된 시점부터 현재까지 MySQL에 접속했던 호스트들의 전체 목록을 얻고자 할 때는 Performance 스키마의 hosts 테이블을 조회해서 해당 내용을 확인할 수 있음 
+    - > SELECT * FROM perfromance_schema.hosts;
+    - HOST 칼럼이 NULL인 데이터에는 MySQL 내부 스레드 및 연결 시 인증에 실패한 커넥션들이 포함됨 
+  - 미사용 DB 계정 확인 
+    - MySQL 서버가 구동된 시점부터 현재까지 사용되지 않은 DB 계정들을 확인. 현재 MySQL에 생성돼 있는 계정들을 대상으로 계정별 접속 이력 유무와 뷰, 또는 트리거, 스토어드 프로시저 같은 스토어드 프로그램들의 생성 유무를 확인해서 두 경우 모두 해당되지 않는 계정들의 목록이 출력됨
+    - ```sql
+      SELECT Distinct m_u.user, m_u.host
+      FROM mysql.user m_u
+      LEFT JOIN performance_schema.accounts ps_a ON m_u.user = ps_a.user AND ps_a.host = m_u.host
+      LEFT JOIN information_schema.views is_v ON is_v.definer = CONCAT(m_u.User,'@',m_u.Host)
+      AND is_v.security_type = 'DEFINER'
+      LEFT JOIN information_schema.routines is_r ON is_r.definer = CONCAT(m_u.User,'@',m_u.Host) AND is_r.security_type = 'DEFINER'
+      LEFT JOIN infroamtion_schema.events is_e ON is_e.definer = CONCAT(m_u.user,'@', m_u.host)
+      LEFT JOIN information_schema.triggers is_t on is_t.definer = CONCAT(m_u.user,'@',m_u.host)
+      WHERE ps_a.user IS NULL
+      AND is_v.definer IS NULL
+      AND is_r.definer IS NULL
+      AND is_e.definer IS NULL
+      AND is_t.definer IS NULL
+      ORDER BY m_u.user, m_u.host;
+      ```
