@@ -145,3 +145,14 @@
   - git stash save 명령어로 작업 내역을 stash에 저장함 - git stash save
   - git stash list 명령어로 stash에 저장된 내용을 볼 수 있음 - git stash list
   - git stash pop 명령어를 이용해서 stash에 저장해놨던 내용을 다시 가져올 수 있음 - git stash pop
+
+# Github 중급기능 
+- GitHub fork - 원본 저장소를 복제해서 나만의 작업 공간 만들기
+  - 오픈소스 등 대규모 프로젝트에서 작업자 모두 자신의 branch를 만든다면 엄청나게 많은 branch가 생성되게 될 것
+  - brnach 대신 GitHub fork를 이용하면 원본 저장소와 독립적인 나만의 복사된 저장소를 만들 수 있음 
+- GitHub Pull Request - Fork에서 작업한 내역을 메인 Repository에 Merge해달라고 요청
+  - Fork한 저장소에서 작업한 내역을 메인 Repository에 Merge해달라고 요청할때 Pull Request를 사용할 수 있음 
+  - 메인 저장소는 Pull Request만을 통해 Merge를 허용하는 정책을 사용
+- gitignore 파일
+  - 변경사항을 추적하고 싶지 않은 파일이나 확장자 등을 별도의 .gitignore 파일을 통해 관리할 수 있음 
+  - .gitignore 파일을 통해 불필요한 파일들을 추적대상에서 제거할 수 있음  
