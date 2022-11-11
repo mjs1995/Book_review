@@ -947,3 +947,66 @@
       AND is_t.definer IS NULL
       ORDER BY m_u.user, m_u.host;
       ```
+  - MySQL 총 메모리 사용량 확인
+    - MySQL 서버에 할당된 메모리의 전체 크기를 확인할 수 있음. MySQL 서버가 사용하고 있는 메모리 양보다 클 수 있음 
+    - > SELECT * FROM sys.memory_global_total;
+  - 스레드별 메모리 사용량 확인
+    - MySQL에서 동작 중인 스레드들의 메모리 사용량을 확인하고자 할 때, MySQL 내부 백그라운드 스레드 및 클라이언트 연결 스레드들의 현재 메모리 사용량이 출력됨 
+    - ```sql
+      SELECT thread_id, user, current_allocated
+      FROM sys.memory_by_thread_by_current_bytes
+      LIMIT 10;
+      ```
+  - 미사용 인덱스 확인
+    - Sys 스키마의 schema_unused_indexes 뷰를 통해 MySQL 서버가 구동된 시점부터 현재까지 사용되지 않은 인덱스의 목록을 확인할 수 있음 
+    - ```sql
+      SELECT *
+      FROM sys.schema_unused_indexes;
+      ```
+    - 사용하지 않은 인덱스는 불필요하게 디스크 공간을 차지하므로 MySQL 서버 관리 측면에서도 명시적으로 제거하는 것이 좋음. 제거할 때는 안전하게 인덱스가 쿼리에 사용되지 않는 INVISIBLE 상태로 먼저 변경해서 일정 기간 동안 문제가 없음을 확인한 후 제거하는 것이 좋음
+    - ```sql
+      --// 인덱스를 INVISIBLE 상태로 변경
+      ALTER TABLE users ALTER INDEX ix_name INVISIBLE;
+      
+      --// INVISIBLE 상태 확인
+      SELECT TABLE_NAME, INDEX_NAME, IS_VISIBLE
+      FROM information_schema.statistics
+      WHERE TABLE_SCHEMA = 'DB1' AND TABLE_NAME='users' AND INDEX_NAME ='ix_name';
+      ```
+  - 중복된 인덱스 확인
+    - Sys 스키마의 scheam_redundant_indexes 뷰를 통해 각 테이블에 존재하는 중복된 인덱스의 목록을 확인할 수 있음
+    - ```sql
+      SELECT * 
+      FROM sys.schema_redundant_indexes 
+      LIMIT 1 \G
+      ```
+    - 인덱스의 중복 여부는 인덱스를 구성하고 있는 칼럼에 대해 두 인덱스의 칼럼 구성 순서가 일치하고 어느 한쪽이 다른 한쪽에 포함되는지를 바탕으로 결정됨 
+  - 변경이 없는 테이블 목록 확인
+    - MySQL 서버가 구동된 시점부터 현재까지 쓰기가 발생하지 않은 테이블의 목록을 확인하고자 할 때 
+    - ```sql
+      SELECT t.table_schema, t.table_name, t.table_rows, tio.count_read, tio.count_write
+      FROM information_schema.tables AS t
+      JOIN performance_schema.table_io_waits_summary_by_table AS tio
+      ON tio.object_schema = t.table_schema AND tio.object_name = t.table_name
+      WHERE t.table_schema NOT IN ('mysql', 'performance_schema', 'sys')
+      AND tio.count_write = 0
+      ORDER BY t.table_schema, t.table_name;
+      ```
+  - I/O 요청이 많은 테이블 목록 확인
+    - Sys 스키마의 io_global_by_file_by_bytes 뷰를 조회해서 테이블들에 대한 I/O 발생량을 종합적으로 확인해볼 수 있음 
+    - 사용자는 해당 뷰에서 테이블 데이터 파일에 대한 데이터들만 선별해서 조회함으로써 MySQL 서버가 구동되는 동안 I/O 요청이 가장 많이 발생한 테이블들을 확인할 수 있음 
+    - > SELECT * FROM sys.io_global_by_file_by_bytes WHERE file LIKE '%ibd';
+  - 테이블별 작업량 통계 확인
+    - Sys 스키마의 schema_table_statistics 뷰를 통해 MySQL 서버에 존재하는 각 테이블에 대한 데이터 작업 유형 및 I/O 유형별 전체 통계 정보를 확인할 수 있음 
+    - ```sql
+      SELECT table_schema, table_name, rows_fetched, rows_inserted, rows_updated, rows_deleted, io_read, io_write
+      FROM sys.schema_table_statistics
+      WHERE table_schema NOT IN ('mysql', 'performance_schema', 'sys') \G
+      ```
+    - 사용자는 이러한 통계 정보들을 통해 각 테이블에서 주로 어떤 작업들이 발생하는지 확인할 수 있으며, 이를 바탕으로 테이블의 대략적인 사용 형태를 파악할 수도 있음. 각 테이블의 주된 사용 형태는 MySQL 서버의 현재 상태를 분석하고 튜닝하는 데 있어 사용자가 기본적으로 파악해야 하는 부분 중 하나
+  - 테이블의 Auto-Increment 칼럼 사용량 확인
+    - MySQL 서버에서 테이블을 생성할 때 테이블의 프라이머리 키로 순차적으로 증가하는 값을 사용하고 싶은 경우, 일반적으로 테이블의 첫 번째 칼럼에 Auto-Increment 속성을 지정하고 이를 프라이머리 키로 사용함
+    - ```sql
+      SELECT table_schema, table_name, column_name, auto_increment AS "current_value", max_value, ROUND(auto_increment_ratio * 100, 2) AS "usage_ratio"
+      FROM sys.schema_auto_increment_columns;
+      ```
