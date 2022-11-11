@@ -156,3 +156,22 @@
 - gitignore 파일
   - 변경사항을 추적하고 싶지 않은 파일이나 확장자 등을 별도의 .gitignore 파일을 통해 관리할 수 있음 
   - .gitignore 파일을 통해 불필요한 파일들을 추적대상에서 제거할 수 있음  
+
+# Git 심화 명령어
+- Git 특정 commit만 다른 branch에 추가하기 - git cherry-pick
+  - 작업을 진행하다가특정 commit만 다른 branch에 추가하고 싶은 상황이 있을 수 있음(e.g.2.0 branch에서 다음 버전의 기능을 개발중인데 심각 버그를 발견하여 이 심각한 버그를 수정한 수정 내역만 빠르게 master branch에 적용하고 싶을때)
+  - git cherry-pick 명령어를 이용해서 다른 branch에 있는 특정 commit만 반영할 수 있음 
+  - git cherry-pick "반영하고 싶은 commit hash"
+  - 모든 branch의 로그를 확인하고 싶을 때
+  - git log --branches
+- Git rebase - base를 바꿔서 합치는 방법
+  - 2개의 branch를 합치는 명령어에는 2가지 방식이 있음
+  - git merge
+    - Git Merge-Fast-forward merge
+    - Fast-forward merge 같은 경우 branch 생성 이후 추가 commit 이 없을 경우에 별도의 추가 commit을 진행하지 않을 경우, 추가적인 commit 메시지 없이 빨리감기 형태로 merge가 진행됨 
+    - Git Merge -3-way merge
+      - branch 생성 이후 commit이 있을 경우 2개의 merge를 수행하는 merge commit을 별도로 생성한 이후에 merge가 진행되게 됨 
+      - 대규모 소프트웨어 개발에서 이렇게 merge commit이 지속적으로 생기게되면 나중에 history 관리가 어려워질 수 있음 
+  - git rebase 
+    - git rebase는 base를 다른 branch의 최신 commit으로 바꿔주어서 병합과정에서 별도의 merge commit이 생성되지 않게 만들어주는 명령어 
+    - git rebase <rebase 대상이 되는 branch> 
