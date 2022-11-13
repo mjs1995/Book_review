@@ -1010,3 +1010,44 @@
       SELECT table_schema, table_name, column_name, auto_increment AS "current_value", max_value, ROUND(auto_increment_ratio * 100, 2) AS "usage_ratio"
       FROM sys.schema_auto_increment_columns;
       ```
+  - 풀 테이블 스캔 쿼리 확인
+    - 테이블 풀스캔은 쿼리의 성능을 저하시키는 대표적인 원인 중 하나. 테이블 풀스캔은 일반적으로 쿼리가 실행될 때 쿼리에서 사용할 적절한 인덱스가 테이블에 존재하지 않는 경우에 발생함. 테이블 풀스캔을 발생시키는 쿼리가 일회성으로 사용되는 것이 아니며 조회하는 테이블의 사이즈가 작지 않다면 MySQL 서버에 지속적인 부하를 줄 수 있음 
+    - 테이블 풀 스캔을 발생시키는 쿼리는 실행 시간이 긴 경우 슬로우 쿼리 로그(Slow Query Log) 파일에서도 확인할 수 있지만, 슬로우 쿼리 로그 파일에서는 테이블 풀스캔 쿼리뿐만 아니라 실행 시간이 오래 걸리는 다양한 쿼리가 기록됨 
+    - ```sql
+      SELECT db, query, exec_count, sys.format_time(total_latency) as "formatted_total_latency", rows_sent_avg, rows_examined_avg, last_seen
+      FROM sys.x$statements_with_full_table_scans 
+      ORDER BY total_latency DESC \G
+      ```
+  - 자주 실행되는 쿼리 목록 확인
+    - MySQL 서버에서 빈번하게 실행되는 쿼리들을 확인하고자 할 때 다음 쿼리를 사용해 확인할 수 있음
+    - ```sql
+      SELECT db, exec_count, query
+      FROM sys.statement_analysis
+      ORDER BY exec_count DESC;
+      ```
+  - 실행 시간이 긴 쿼리 목록 확인
+    - MySQL 서버에서 오랫동안 실행된 쿼리들의 목록을 확인하고자 할 때 다음 쿼리를 사용할 수 있음
+    - ```sql
+      SELECT query, exec_count, sys.format_time(avg_latency) as "formatted_avg_latency", rows_sent_avg, rows_examined_avg, last_seen
+      FROM sys.x$statement_analysis
+      ORDER BY avg_latency DESC;
+      ```
+  - 정렬 작업을 수행한 쿼리 목록 확인
+    - 많은 양의 데이터를 읽은 후 내부적으로 정렬 작업을 수행하는 쿼리들의 경우 서버의 CPU 자원을 많이 소모함. 이러한 쿼리들이 갑자기 대량으로 MySQL 서버에서 유입되면 서버에 부하를 주어 문제가 발생할 수 있음
+    - 정렬 작업을 수행하는 쿼리들을 확인해서 정렬이 발생하지 않게 쿼리를 수정하거나 테이블 인덱스를 조정해 새로운 인덱스를 추가하는 방안을 고려해보는 것이 좋음
+    - ```sql
+      SELECT * 
+      FROM sys.statements_with_sorting
+      ORDER BY last_seen DESC LIMIT 1 \G
+      ```
+  - 임시 테이블을 생성하는 쿼리 목록 확인
+    - 실행 시 임시 테이블을 생성하는 쿼리들의 목록을 확인하고자 할 때 다음 쿼리를 사용할 수 있음
+    - ```sql
+      SELECT *
+      FROM sys.statements_with_temp_tables
+      LIMIT 10 \G
+      ```
+  - 트랜잭션이 활성 상태인 커넥션에서 실행한 쿼리 내역 확인
+    - 종종 MySQL 서버에서 세션의 트랜잭션이 정상적으로 종료되지 않고 오랫동안 남아있는 경우가 있음. 트랜잭션에서 실행한 쿼리들로 인해 다른 세션에서 실행된 쿼리가 처리되지 못하고 대기 할 수 있으며, 다량으로 쌓인 언두 데이터로 인해 쿼리 성능이 저하되는 등의 문제가 발생할 수도 있음 
+    - 트랜잭션에서 실행된 쿼리들을 확인. 트랜잭션에서 실행된 쿼리 내역을 통해 애플리케이션 서버의 어느 로직에서 이 트랜잭션을 발생시킨 건지 짐작해볼 수 있기 때문 
+    - 현재 열려 있는 트랜잭션이 아닌 특정 세션에서 실행된 쿼리들의 전체 내역을 확인하과 싶은 경우, 쿼리 내역을 살펴보고 싶은 세션의 PROCESSLIST ID 값을 먼저 확인한 후 쿼리의 WHERE 절에 입력해줌 
