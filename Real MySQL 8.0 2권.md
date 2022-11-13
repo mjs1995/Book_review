@@ -1051,3 +1051,74 @@
     - 종종 MySQL 서버에서 세션의 트랜잭션이 정상적으로 종료되지 않고 오랫동안 남아있는 경우가 있음. 트랜잭션에서 실행한 쿼리들로 인해 다른 세션에서 실행된 쿼리가 처리되지 못하고 대기 할 수 있으며, 다량으로 쌓인 언두 데이터로 인해 쿼리 성능이 저하되는 등의 문제가 발생할 수도 있음 
     - 트랜잭션에서 실행된 쿼리들을 확인. 트랜잭션에서 실행된 쿼리 내역을 통해 애플리케이션 서버의 어느 로직에서 이 트랜잭션을 발생시킨 건지 짐작해볼 수 있기 때문 
     - 현재 열려 있는 트랜잭션이 아닌 특정 세션에서 실행된 쿼리들의 전체 내역을 확인하과 싶은 경우, 쿼리 내역을 살펴보고 싶은 세션의 PROCESSLIST ID 값을 먼저 확인한 후 쿼리의 WHERE 절에 입력해줌 
+- 쿼리 프로파일링
+  - 쿼리가 MySQL 서버에서 처리될 때 처리 단계별로 시간이 어느 정도 소요됐는지 확인할 수 있다면 쿼리의 성능을 개선하는데 많은 도움이 될 것. MySQL에서는 이를 위해 쿼리 프로파일링 기능을 제공하고 있으며, 사용자는 SHOW PROFILE 및 SHOW PROFILES 명령을 사용하거나 Performance 스키마를 통해 쿼리의 처리 단계별 소요 시간을 확인할 수 있음 
+  - ```sql
+    --// 현재 Performance 스키마 설정을 저장
+    CALL sys.ps_setup_save(10);
+    
+    --// 쿼리 프로파일링을 위해 설정 변경을 진행
+    UPDATE performance_schema.setup_instruments
+    SET ENABLED = 'YES', TIMED ='YES'
+    WHERE NAME LIKE '%statement/%' OR NAME LIKE '%stage/%';
+    
+    UPDATE performance_schema.setup_consumers
+    SET ENABLED = 'YES'
+    WHERE NAME LIKE %events_statemnets_%' OR NAME LIKE %events_stages_%';
+   
+   --// 프로파일링 대상 쿼리를 실행
+   SELECT * FROM DB1.tb1 WHERE id = 200725;
+   
+   --// 실행된 쿼리에 매핑되는 이벤트 ID값을 확인
+   SELECT EVENT_ID, SQL_TEXT, sys.format_time(TIMER_WAIT) AS "Duration"
+   FROM performance_schema.events_statements_history_long
+   WHERE SQL_TEXT LIKE '%200725%';
+   
+   SELECT EVENT_NAME AS "Stage", sys.format_time(TIMER_WAIT) AS "DURATION"
+   FROM performance_schema.events_stages_history_long
+   WHERE NESTING_EVENNT_ID = 4011
+   ORDER BY TIMER_START;
+   
+   CALL sys.ps_setup_reload_saved();
+   ```
+- ALTER 작업 진행률 확인
+  - ALTER TABLE 명령문을 사용해 테이블 스키마를 변경하는 작업을 진행하는 경우 작업이 어느 정도 진행되고 있는지 그 진행률을 Performance 스키마에 저장된 이벤트 데이터를 통해 확인
+  - ALTER TABLE 명령문이 실행되기 전에 Performance 스키마에서 ALTER 작업과 관련된 설정들이 활성화돼야 함
+  - ```sql
+    SELECT NAME, ENABLED, TIMED
+    FROM performance_schema.setup_instruments
+    WHERE NAME LIKE 'stage/innodb/alter%';
+    
+    SELECT *
+    FROM performance_schema.setup_consumers WHERE NAME LIKE '%stages%';
+    
+    UPDATE performance_schema.setup_instrumnets
+    SET ENABLED='YES', TIMED='YES
+    WHERE NAME LIKE 'stage/innodb/alter%;
+    
+    --// ALTER TABLE 명령을 실행
+    ALTER TABLE tb1 ADD KEY ix_col1 (col1);
+    
+    --// ALTER 작업 진행률을 확인
+    SELECT ps_estc.NESTING_EVENT_ID, ps_semc.SQL_TEXT, ps_estc.EVENT_NAME, ps_estc.WORK_COMPLETED, ps_estc.WORK_ESTIMATED, ROUND((WORK_COMPLETED/WORK_ESTIMATED)*100,2) as "PROGRESS(%)"
+    FROM performance_schema.events_stages_current ps_estc
+    INNER JOIN performance_schema.events_statements_current ps_esmc ON ps_estc.NESTING_EVENT_ID=ps_esmc.EVENT_ID
+    WHERE ps_estc.EVENT_NAME LIKE 'stage/innodb/alter%' \G
+    ```
+  - Performance 스키마의 events_stages_history_long 테이블을 조회해서 ALTER 작업에 대해 전체적인 진행 단계 및 단계별 소요 시간을 확인할 수도 있음 
+  - ```sql
+    SELECT NESTING_EVENT_ID, EVENT_ID, EVENT_NAME, sys.format_time(TIMER_WAIT) AS 'ELAPSED_TIME'
+    FROM performance_schema.events_stages_history_long
+    WHERE NESTING_EVENT_ID=78
+    ORDER BY TIMER_START \G
+    ```
+- 메타데이터 락 대기 확인
+  - ALTER TABLE 명령문을 사용해 테이블 스키마를 변경할 때 다른 세션에서 변경 대산 테이블에 대해 메타데이터 락을 점유하고 있는 경우 ALTER TABLE 명령문은 진행되지 못하고 대기하게 됨 
+  - ```sql
+    SELECT *
+    FROM sys.schema_table_lock_waits
+    WHERE waiting_thread_id != blocking_thread_id \G
+    ```
+- 데이터 락 대기 확인
+  - 서로 다른 세션 간에 데이터 락 대기가 발생한 경우 SyS 스키마의 innodb_lock_waits 뷰를 조회해서 대기가 발생한 데이터 락과 관련된 종합적인 정보를 확인 할 수 있음
+  - > SELECT * FROM sys.innodb_lock_waits \G
