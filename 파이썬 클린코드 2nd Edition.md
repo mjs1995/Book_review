@@ -147,3 +147,53 @@
   - 컴프리헨션을 사용하면 코드를 보다 간결하게 작성할 수 있고, 일반적으로 가독성도 높아지기 때문
   - 컴프리헨션의 가독성을 생각해야 하며, 정말로 이해하기 쉬운 코드가 되는 것이 아니라면, 한 줄 코드를 만들기 위해 노력하지 않도록 유의하자
   - 할당 표현식을 사용하는 또 다른 이유는 성능 때문. 어떤 변환 작업을 위해 호출하는 경우 필요 이상으로 호출되기를 원하지 않을 것. 뿐만 아니라 할당 표현식에서 함수의 결과를 임시 식별자에 할당하는 것은 코드의 가독성을 높이는 좋은 최적화 기술 중 하나
+- 프로퍼티, 속성(Attribute)과 객체 메서드의 다른 타입들
+  - 파이썬에서의 밑줄
+    - ```python
+      class Connector:
+        def __init__(self, source):
+          self.source = source
+          self._timeout = 60
+
+      conn = Connector("postgresql://localhost")
+      conn.source # 'postgresql://localhost'
+      conn._timeout # 60
+      conn.__dict__ # {'source': 'postgresql://localhost', '_timeout': 60}
+      ```
+    - timeout은 connector 자체에서만 사용되고 호출자는 이 속성에 접근하지 않아야 함. timeout 속성은 내부에서만 사용하고 바깥에서는 호출하지 않을 것이므로 외부 인터페이스를 고려하지 않고 언제든 안전하게 리팩토링할 수 있음
+    - 클래스는 외부 호출 객체와 관련된 속성과 메서드만을 노출해야 함. 즉 객체의 인터페이스로 공개하는 용도가 아니라면 모든 멤버는 접두사로 하나의 밑줄을 사용하는 것이 좋음
+    - 밑줄로 시작하는 속성은 private 처럼 취급되어야 하고 외부에서 호출하면 안 됨. 예외적으로 단위 테스트에서 직접 내부 속성에 접근하는 것이 편리하다면 허용될 수도 있음
+    - 맹글링(name manging) : 밑줄 두 개를 사용하면 파이썬은 다른 이름을 만듬. 이중 밑줄을 사용한 변수의 이름을 "_<class_name>__<attribute-name>"형태로 변경하는 것 
+    - 파이썬에서 이중 밑줄을 사용하는 것은 완전히 다른 경우를 위한 것. 여러 번 확장되는 클래스의 메서드를 이름 충돌 없이 오버라이드하기 위해 만들어졌음
+    - 속성을 private으로 정의하려는 경우 하나의 밑줄을 사용하고 파이썬 스로운 관습을 지키도록 해야 함
+    - 객체의 일부 속성을 public으로 공개 하고 싶은 경우 프로퍼티를 사용함
+  - 프로퍼티
+    - 일반적으로 객체 지향 설계에서는 도메인 엔티티를 추상화하는 객체를 만듬. 이러한 객체는 어떤 동작이나 데이터를 캡슐화할 수 있음
+    - 종종 데이터의 정확성이 객체를 생성할 수 있는지 여부를 결정함. 일부 엔터티는 데이터가 특정 값을 가질 경우에만 존재할 수 있고, 잘못된 값을 가진 경우에는 존재할 수 없음
+    - ```python
+      class Coordinate:
+        def __init__(self, lat: float, long: float) -> None:
+          self._latitude = self._longitude = None
+          self.latitude = lat
+          self.longitude = long
+
+        @proerty
+        def latitude(self) -> float:
+          return self._latitude
+
+        @latitude.setter
+        def latitude(self, lat_value: float) -> None:
+          if lat_value not in range(-90, 90 + 1):
+            raise ValueError(f"유효하지 않은 위도 값: {lat_value}")
+          self._latitude = lat_value
+
+        @property
+        def longtitude(self) -> float:
+          return self._longtitude
+
+        @longitude.setter
+        def longitude(self, long_value: float) -> None:
+          if long_value not in range(-180, 180 + 1):
+            raise ValueError(f"유효하지 않은 경도 값: {long_value}")
+          self._longitude = long_value
+      ```
