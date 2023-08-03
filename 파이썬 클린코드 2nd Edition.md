@@ -197,3 +197,51 @@
             raise ValueError(f"유효하지 않은 경도 값: {long_value}")
           self._longitude = long_value
       ```
+    - @latitude.setter 데코레이터로 선언된 유효성 검사 로직이 자동으로 호출되며 명령문의 오른쪽에 있는 값 <new-latitude-value>이 파라미터로 전달됨(위에서는 lat_value 파라미터)
+    - 객체의 상태나 내부 데이터에 따라 어떤 계산을 하고 싶은 경우가 있을 수도 있음. 이런 경우에도 프로퍼티가 좋은 선택
+    - 프로퍼티는 명령-쿼리 분리 원칙(command and query separation - CC08)을 따르기 위한 좋은 방법. 명령-쿼리 분리 원칙은 객체의 메서드가 무언가의 상태를 변경하는 커맨드이거나 무언가의 값을 반환한느 쿼리이거나 둘 중에 하나만 수행해야지 둘 다 동시에 수행하면 안된다는 것
+    - @property 데코레이터는 무언가에 응답하기 위한 쿼리이고, @<property_name>.setter는 무언가를 하기 위한 커맨드
+    - 게으른 프로퍼티(lazy property)는 사전에 어떤 값을 미리 계산한 다음에 그 계산된 값을 사용하는 것. 그 외의 경우라면 프로퍼티가 멱등성(idempotent - 연산을 여러번 반복하더라도 결과가 동일한 성질)을 유지하도록 하고, 내부 표현을 변경하는 메서드를 따로 만들어야 함
+  - 보다 간결한 구문으로 클래스 만들기
+    - 파이썬에는 객체의 값을 초기화하는 일반적인 보일러플레이트(boilerplate code, boilerplate - 모든 프로젝트에서 공통적으로 반복해서 사용하는 코드) 코드가 있음
+    - __init__ 메서드에 객체에서 필요한 모든 속성을 파라미터로 받은 다음 내부 변수에 할당하는 것
+    - ```python
+      def __init__(self, x, y, ...):
+        self.x = x
+        self.y = y
+      ```
+    - 파이썬 3.7 부터는 dataclasses 모듈을 사용하여 위 코드를 훨씬 단순화할 수 있음
+    - dataclasses 모듈은 @dataclass 데코레이터를 제공함. 이 데코레이터를 클래스에 적용하면 모든 클래스의 속성에 대해서 마치 __init__ 메서드에서 정의한 것처럼 인스턴스 속성으로 처리함. @dataclass 데코레이터를 사용하면 __init__ 메서드를 자동으로 생성하므로 또 다시 __init__ 메서드를 구현할 필요가 없음
+    - dataclassess 모듈은 field라는 객체도 제공함. 이 field 객체는 해당 속성에 특별한 특징이 있음을 표시함
+    - ```python
+      from typing import List
+      from dataclasses import dataclass, field
+
+      R = 26
+
+      @dataclass
+      class RTrieNode:
+        size = R
+        value: int
+        next_: List["RTrieNode"] = field(default_factory = lambda: [None] * R)
+
+        def __post_init__(self):
+          if len(self.next_) != self.size:
+            raise ValueError(f"리스트(next_)의 길이가 유효하지 않음)
+      ```
+    - @dataclass 데코레이터를 사용하면 __init__ 메서드에서 모든 변수의 이름을 반복해서 작성하는 번거로움 없이 간편하게 데이터 클래스를 만들 수 있음
+    - 어노테이션이 데이터 변환을 해주지 않는다는 점을 명심. 예를 들어 float 타입이거나 integer 타입이어야만 한다면 __init__ 메서드 안에서 이 변환을 해야함
+    - __init__메서드 안에서 별도의 처리를 하거나, 유효성 검사가 엄격하게 필요하지 않은 경우에 데이터 클래스를 사용하는 것이 적합함
+    - 데이터 컨테이너나 래퍼(wrapper) 클래스의 용도로 사용되는 모든 경우에 데이터 클래스가 유용할 것
+  - 이터러블 객체 만들기
+    - 객체를 반복하려고 하면 파이썬은 해당 객체의 iter() 함수를 호출함. 이 함수가 처음으로 하는 것은 해당 객체에 __iter__ 메서드가 있는지를 확인하는 것. 만약 있으면 __iter__ 메서드를 실행함
+  - 시퀀스 만들기
+    - iter() 함수는 객체에 __iter__가 정의되어 있지 않으면 __getitem__을 찾고 없으면 TypeError를 발생시킴. 시퀀스는 __len__과 __getitem__을 구현하고 첫 번째 인덱스 0부터 시작하여 포함된 요소를 한 번에 하나씩 차례로 가져올 수 있어야 함
+    - 컨테이너 객체
+      - 컨테이너는 __contains__ 메서드를 구현한 객체로 __contains__ 메서드는 일반적으로 Boolean 값을 반환함
+    - 객체의 동적인 속성
+      - __getattr__ 매직 메서드를 사용하면 객체가 속성에 접근하는 방법을 제어할 수 있음
+      - __getattr__ 메서드는 존재하지 않는 속성에 접근하려고 할 때 호출됨. __getattr__ 처럼 동적으로 변하는 속성에 대한 메서드를 작성하는 경우, 존재하지 않는 속성에 접근하려고 하면 AttributeError 오류를 발생시키도록 하자
+    - 호출형 객체(callable)
+      - 파이썬은 object(*args, **kwargs) 같은 구문으로 생성한 객체를 object.__call__ (*args, **kwargs) 형태로 변환함. 이 메서드는 객체를 파라미터가 있는 함수처럼 사용하거나 정보를 기억하는 함수처럼 사용하는 경우 유용함 
+    - 매직 메서드 요약 
