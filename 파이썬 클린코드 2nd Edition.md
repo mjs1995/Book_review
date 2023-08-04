@@ -245,3 +245,57 @@
     - 호출형 객체(callable)
       - 파이썬은 object(*args, **kwargs) 같은 구문으로 생성한 객체를 object.__call__ (*args, **kwargs) 형태로 변환함. 이 메서드는 객체를 파라미터가 있는 함수처럼 사용하거나 정보를 기억하는 함수처럼 사용하는 경우 유용함 
     - 매직 메서드 요약 
+      - 파이썬에서의 매직 메서드
+      - |사용 예|매직 메서드|비고|
+        |:---:|:---:|:---:|
+        |obj[key],obj[i:j],obj[i:j:k]|__getitem__(key)|첨자형(subscriptable) 객체|
+        |with obj: ...|__enter__/__exit__|컨텍스트 관리자
+        |for i in obj: ...|__iter__/__next__/__len__/__getitem__|이터러블 객체, 시퀀스
+        |obj.<attribute>|__getattr__|동적 속성 조회
+        |obj(*args, **kwargs)|__call(*args, **kwargs), 호출형 (callable) 객체
+- 파이썬에서 유의할점
+  - 사용자 정의 사전을 만들려는 경우 dict를 직접 상속하지 말고 collections.UserDict를 상속받자. 마찬가지로 리스트는 collections.UserList, 문자열이라면 collections.UserString을 상속받자
+- 비동기 코드(asynchronous code)에 대한 간략한 소개
+  - 비동기식 프로그래밍의 기본 아이디어는 중지(suspend) 가능한 코드가 있다면 그동안 다른 코드를 실행하자는 것
+  - 비동기 프로그래밍의 장점은 I/O 작업 진행되는 동안 프로그램을 멈추지 않는다는 것. 다만, 이것이 I/O 작업을 하는 동안 다른 코드를 실행할 수 있다는 뜻이지만 동시에 여러 프로세스가 실행된다는 의미는 아님. 코드의 실행은 여전히 단일 스레드에서 이뤄짐
+  - 비동기 프로그래밍을 위한 코루틴이 일반 함수와 다른 점은 이름 앞에 async def가 추가된다는 점. 코루틴 안에서 다른 코루틴을 호출하려는 경우 호출 전에 await 키워드를 사용함
+  - await가 호출되면 이벤트 루프가 제어권을 되찾아 옴. 이벤트 루프는 해당 코루틴이 종료되기를 기다리는 동안 다른 코드를 실행함. 원래의 코루틴 작업이 완료되면 이벤트 루프는 중단지점 바로 다음 (await 문장 바로 다음 줄)에서부터 작업을 다시 시작함
+  - ```python
+    async def mycoro(*args, **kwargs):
+      # ... logic
+      await third_party.coroutine( ... )
+      # ... more of our logic
+    ```
+  - asyncio의 경우는 해당 코루틴이 완료될 때까지 대기하는 내장 함수도 제공함 
+
+# 좋은 코드의 일반적인 특징 
+- 계약에 의한 디자인
+  - 컴포넌트는 기능을 숨겨 캡슐화하고 함수를 사용할 클라이언트에게는 애플리케이션 프로그래밍 인터페이스(Application Programming Interface - API)를 노출해야 함 
+- 방어적(defensive) 프로그래밍
+  - 에러 처리 방법
+    - 값 대체(value substitution)
+      - 일부 시나리오에서는 오류가 있어 소프트웨어가 잘못된 값을 생성하거나 전체가 종료될 위험이 있을 경우 결과 값을 안전한 다른 값으로 대체할 수 있음 
+    - 에러 로깅
+    - 예외 처리
+      - 예외적인 상황을 명확하게 알려주고 원래의 비즈니스 로직에 따라 흐름을 유지하는 것이 중요함
+      - 파이썬의 예외와 관련된 몇 가지 권장 사항
+        - 올바른 수준의 추상화 단계에서의 예외 처리 
+          - 예외는 오직 한 가지 일을 하는 함수의 한 부분이어야 함. 함수가 처리하는 (또는 발생시키는) 예외는 함수가 캡슐화하고 있는 로직에 대한 것이어야 함
+          - ```python
+            def deliver_event(self, event: Event):
+              try:
+                self.connect()
+                data = event.decode()
+                self.send(data)
+              except ConnectionError as e:
+                logger.info("커넥션 오류 발견: %s", e)
+              except ValueError as e:
+                logger.error("%r 이벤트에 잘못된 데이터 포함: %s", event, e)
+                raise
+            ```
+          - ConnectionError는 connect 메서드 내에서 처리되어야 함. 이렇게 하면 행동을 명확하게 분리할 수 있음. 예를 들어 메서드가 재시도를 지원하는 경우 그 안에서 예외 처리를 할 수 있음. 반대로 ValueError는 event의 decode 메서드에 속한 에러. 이렇게 구현을 수정하면 deliver_event에서는 예외를 catch할 필요가 없음
+        - 엔드 유저에게 Traceback 노출 금지
+          - 특정 문제를 나타내는 예외가 발생한 경우 문제를 효율적으로 해결할 수 있도록 traceback 정보, 메시지 및 기타 수집 가능한 정보를 최대한 로그로 남기는 것이 중요함. 이러한 세부사항은 절대 사용자에게 보여서는 안됨
+        - 비어있는 except 블록 지양
+          - 특히 너무 방어적이어서 아무것도 하지 않은 채로 조용히 지나쳐버리는 비어있는 except 블록은 가장 안 좋은 예
+          - 심지어 심각한 오류가 발생한 경우에도.. 에러는 결코 조용히 전달되어서는 안된다는 파이썬의 철학(The Zen of Python)을 떠올리면 이는 파이썬스러운 코드가 아님
