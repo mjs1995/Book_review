@@ -441,3 +441,50 @@
   - 가장 큰 장점 : 논블로킹 방식으로 병령 I/O 작업을 할 수 있다는 것. 이 때 필요한 것은 보통 서드파티 라이브러리에서 구현한 저수준의 제너레이터. 이 라이브러리들 코루틴이 일시 중단된 동안 실제 I/O 처리르 함. 코루틴이 정지된 동안 프로그램은 다른 작업을 할 수 있어 효율적
   - 효율적인 반복을 원할 때는 제너레이터를 사용하고, 논블로킹 I/O 작업을 원할 때는 코루틴을 사용함. 차이점은 분명하지만 파이썬의 동적 특성으로 인해 이러한 객체를 혼합해서 사용ㅎ다ㅏ가 개발 마지막 단계에서 런타임 오류가 발생하기 도 함
   - await는 yield from을 대신하기 위한 용도로 사용되고, 오직 awaitable 객체에 대해서만 동작함. 코루틴 또한 awaitable 객체. awaitable 인터페이스를 따르지 않는 객체에 await를 호출하면 예외가 발생함. 이것은 인터페이스가 런타임 오류를 방지하고 보다 견고한 디자인을 달성하는 데 어떻게 도움이 될 수 있는지를 보여주는 좋은 예
+  - async def는 앞서 소개한 데코레이터를 대신하여 코루틴을 정의하는 새로운 방법. 이것을 호출하면 코루틴 인스턴스를 반환하는 객체를 만듬
+  - 제너레이터 함수를 호출하면 인터프리터가 제너레이터 객체를 반환하는 것처럼, async def로 정의된 객체를 호출하면 __await__ 메서드를 가진 코루틴 객체를 반환함. 다음에 이 객체는 await 표현식과 함께 사용할 수 있음
+  - 파이썬에서 비동기 프로그래밍을 한다는 것은 일련의 코루틴을 관리하는 이벤트 루프가 있다는 뜻(이벤트 루프라 하면 지금은 표준 라이브러리에 추가된 asyncio를 뜻하지만 동일한 일을 할 수 있는 다른 라이브러리가 많이 있음). 일련의 코루틴들은 이벤트 루프에 속하며, 이벤트 루프의 스케줄링 메커니즘에 따라 호출됨
+  - 비동기 매직 메서드
+    - |개념|매직 메서드|문법|
+      |:---:|:---:|:---:|
+      |비동기 컨텍스트 관리자|__aenter__,__aexit__|async with async_cm() as x: ...
+      |비동기 반복(Iteration)|__aiter__,__anext__|async for e in aiter:...
+    - 비동기 컨텍스트 관리자
+      - 코루틴에서 컨텍스트 관리자를 사용하고 싶다면, 기존의 일반적인 함수인 __enter__와 __exit__ 메서드를 사용할 수 없음. 대신에 __aenter__와 __aexit__ 라는 코루틴 메서드를 사용해야 함. 마찬가지로 단순히 with를 사용하는 대신 async with를 사용해야 함
+      - contextlib 모듈에는 @asyncontextmanager라는 데코레이터도 잇음. 이것은 이전과 마찬가지로 비동기 형태로 컨텍스트 관리자를 사용하기 위한 것
+      - 컨텍스트에 진입하면 __aenter__ 코루틴이 자동으로 호출되고, 종료될 때 __aexit__가 트리거됨
+      - ```python
+        @contextlib.asynccontextmanger
+        async def db_management():
+          try:
+            await stop_database()
+            yield
+          finally:
+            await start_database()
+
+        # 여러 개의 컨텍스트 관리자를 사용하고 있을 경우
+        @contextlib.asynccontextmanager
+        async def metrics_logger():
+          yield await create_metrics_logger()
+
+        async def run_db_backup():
+          async with db_management(), metrics_logger():
+            print("DB 백업 처리 중...")
+        ```
+  - 비동기 제너레이터
+    - 비동기 제너레이터의 안에서 다른 코루틴을 awiat 할 수 있다는 뜻
+    - 비동기 제너레이터는 보다 간결한 방식으로 동일한 목적을 달성할 수 있음
+    - ```python
+      async def record_streamer(max_rows):
+        current_row = 0
+        while current_row < max_rows:
+          row = (current_row, await coroutine())
+          current_row += 1
+          yield row
+      ```
+
+# 단위 테스트와 리팩토링
+- 파이썬 개발의 궁긍적인 목적은 보다 우수하고 유지보수성이 뛰어난 소프트웨어를 작성하는 것이기 때문
+- 디자인 원칙과 단위 테스트
+  - 테스트는 다른 코드의 일부분이 유효한지를 검사하는 코드
+  - 단위 테스트의 특성
