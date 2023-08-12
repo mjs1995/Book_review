@@ -488,3 +488,71 @@
 - 디자인 원칙과 단위 테스트
   - 테스트는 다른 코드의 일부분이 유효한지를 검사하는 코드
   - 단위 테스트의 특성
+    - 격리(Isolation)
+      - 단위 테스트는 다른 외부 에이전트와 완전히 독립적이어야 하며 비즈니스 로직에만 집중해야 함. 때문에 데이터베이스에 연결하지 않아야 하고 HTTP 요청도 하지 않아야 함. 격리는 또한 테스트 자체가 독립적이라는 것을 의미함. 테스트는 이전 상태에 관계없이 임의의 순서로 실행될 수 있어야 함
+    - 성능(Performance)
+      - 단위 테스트는 신속하게 실행되어야 함. 반복적으로 여러 번 실행될 수 있도록 설계해야 함
+    - 반복 가능성(Repeatability)
+      - 단위 테스트는 객관적이고 결정적인 방식으로 소프트웨어의 상태를 평가할 수 있어야 함. 이는 테스트에서 얻은 결과가 반복 가능해야 함을 의미함.
+      - 단위 테스트는 코드의 상태를 평가함. 테스트가 실패하면 코드가 수정될 때까지 계속 실패해야 함. 테스트를 통과했고 코드에 변경 사항이 없었다면 계속 통과해야 함. 테스트 결과가 불규칙적이거나 랜덤화 되어서는 안됨
+    - 자체 검증(Self-validating)
+      - 단위 테스트의 실행만으로 결과를 결정할 수 있어야 함. 단위 테스트를 처리하기 위한 추가 단계가 없어야 함
+  - 자동화된 테스트의 다른 형태
+    - 단위 테스트는 최대한 자세하게 코드를 검사하는 것이 목적.
+    - 통합 테스트에서는 한 번에 여러 컴포넌트를 테스트함. 종합적으로 예상대로 잘 동작하는지 검증함. 이 경우에는 부작용이 발생하는 것도 상관이 없으며 격리에 대한 걱정도 할 필요가 없음. 즉 HTTP 요청을 하거나 데이터베이스에 연결하는 등의 작업을 수행하는 것이 가능하고 때로는 그렇게 하는 것이 바람직 함
+    - 인수 테스트는 유스케이스를 활용하여 사용자 관점에서의 시스템 유효성을 검사하는 자동화된 테스트
+    - 통합 테스트나 인수 테스트를 하면 단위 테스트와 관련된 중요한 특성을 잃게 됨. 바로 속도
+  - 단위 테스트와 소프트웨어 디자인
+    - 테스트의 용이성(Testability,(소프트웨어를 얼마나 쉽게 테스트 할 수 있는지를 결정하는 품질 속성)은 단순히 있으면 좋은 것이 아니라 클린 코드의 핵심 가치)
+    - Proess 객체는 도메인 문제에 대한 일부 작업을 나타내며, MetricsClient는 외부 엔터티에 지표를 전송하기 위한 객체
+    - ```python
+      class MetricsClient:
+        """타사 지표 전송 클라이언트"""
+
+        def send(self, metric_name, metric_value):
+          if not isinstance(metric_name, str):
+            raise TypeError("metric_name으로 문자열 타입을 사용해야 함")
+
+          if not isinstance(metric_value, str):
+            raise TypeError("metric_value로 문자열 타입을 사용해야 함")
+
+          logger.info("%s 전송 값 = %s", metric_name, metric_value)
+
+      class Process:
+
+        def __init__(self):
+          self.client = MetricsClient()  # 타사 지표 전송 클라이언트
+
+        def process_iterations(self, n_iterations):
+          for i in range(n_iterations):
+            result = self.run_process()
+            self.client.send(f"iteration.{i}", result)
+      ```
+    - ```python
+      class WrappedClient:
+
+        def __init__(self):
+          self.client = MetricsClient()
+
+        def send(self, metric_name, metric_value):
+          return self.client.send(str(metric_name), str(metric_value))
+
+      class Process:
+        def __init__(self):
+          self.client = WrappedClient()
+
+        ...
+      ```
+    - ```python
+      import unittest
+      from unittest.mock import Mock
+
+      class TestWrappedClient(unittest.TestCase):
+        def test_send_converts_types(self):
+          wrapped_client = WrappedClient()
+          wrapped_client.client = Mock()
+          wrapped_client.send("Value", 1)
+
+          wrapped_client.client.send.assert_called_with("Value", "1")
+      ```
+    - Mock은 unittest.mock 모듈에서 사용할 수 있는 타입으로 어떤 종류의 타입에도 사용할 수 있는 편리한 객체
